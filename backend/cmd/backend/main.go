@@ -4,7 +4,7 @@ import (
 	"log/slog"
 	"multibank/backend/internal/config"
 	"multibank/backend/internal/logger"
-	"multibank/backend/internal/storage"
+	"multibank/backend/internal/storage/sqlite"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 	log := logger.Setup(cfg.Logger.Level)
 
 	// connect to db
-	st, err := storage.New(cfg.StoragePath)
+	st, err := sqlite.New(cfg.StoragePath)
 	if err != nil {
 		log.Error("failed to init storage", "error", err)
 		return
