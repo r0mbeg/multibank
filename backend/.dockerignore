@@ -1,0 +1,9 @@
+.git
+logs
+storage
+**/*.db
+**/*.log
+**/*.sqlite*
+.DS_Store
+node_modules
+tmp
