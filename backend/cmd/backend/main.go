@@ -4,8 +4,13 @@ import (
 	"context"
 	"log/slog"
 	"multibank/backend/internal/config"
+	httpserver "multibank/backend/internal/http-server"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/service"
 	"multibank/backend/internal/storage/sqlite"
+	"net/http"
+	"strconv"
+	"time"
 )
 
 func main() {
@@ -40,4 +45,21 @@ func main() {
 		return
 	}
 
+	// repo + service
+	repo := sqlite.NewUserRepo(st.DB())
+	svc := service.New(repo, cfg.HTTPServer.Timeout)
+
+	srv := httpserver.New(svc, cfg.HTTPServer.Timeout)
+	httpSrv := &http.Server{
+		Addr:         ":" + strconv.Itoa(cfg.HTTPServer.Port),
+		Handler:      srv.Handler(),
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: cfg.HTTPServer.Timeout + 2*time.Second,
+		IdleTimeout:  60 * time.Second,
+	}
+
+	slog.Info("http server starting", "addr", httpSrv.Addr)
+	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		slog.Error("http server error", "err", err)
+	}
 }

@@ -3,15 +3,15 @@ package domain
 import "time"
 
 type User struct {
-	ID           int64     `db:"id"`            // INTEGER PRIMARY KEY AUTOINCREMENT
-	Email        string    `db:"email"`         // TEXT NOT NULL UNIQUE
-	FirstName    string    `db:"first_name"`    // TEXT NOT NULL
-	LastName     string    `db:"last_name"`     // TEXT NOT NULL
-	Patronymic   string    `db:"patronymic"`    // TEXT NOT NULL
-	BirthDate    string    `db:"birthdate"`     // TEXT (YYYY-MM-DD)
-	PasswordHash string    `db:"password_hash"` // TEXT NOT NULL
-	CreatedAt    time.Time `db:"created_at"`    // TEXT (datetime('now'))
-	UpdatedAt    time.Time `db:"updated_at"`    // TEXT (datetime('now'))
+	ID           int64     `db:"id"            json:"id"`
+	Email        string    `db:"email"         json:"email"`
+	FirstName    string    `db:"first_name"    json:"first_name"`
+	LastName     string    `db:"last_name"     json:"last_name"`
+	Patronymic   string    `db:"patronymic"    json:"patronymic"`
+	BirthDate    string    `db:"birthdate"     json:"birthdate"` // YYYY-MM-DD
+	PasswordHash string    `db:"password_hash" json:"-"`         // не отдаём наружу
+	CreatedAt    time.Time `db:"created_at"    json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"    json:"updated_at"`
 }
 
 func NewUser(email, first, last, patr, birthDate, passHash string) User {
