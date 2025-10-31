@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"multibank/backend/internal/config"
 	"multibank/backend/internal/logger"
@@ -31,5 +32,12 @@ func main() {
 		slog.String("http_server_timeout", cfg.HTTPServer.Timeout.String()),
 		slog.String("http_server_token_ttl", cfg.HTTPServer.TokenTTL.String()),
 	)
+
+	ctx := context.Background()
+
+	if err := st.Migrate(ctx); err != nil {
+		log.Error("migrate", "err", err)
+		return
+	}
 
 }
