@@ -1,0 +1,118 @@
+@startuml
+entity "User" as U {
+  *id : bigint <<PK>>
+  --
+  email : text
+  first_name : text
+  last_name : text
+  patronymic : text
+  birthday : timestamptz
+  password_hash : text
+  created_at : timestamptz
+}
+
+entity "BankConsent" as BC {
+  *id : bigint <<PK>>
+  --
+  user_id : bigint <<FK>>
+  bank_id : bigint <<FK>>
+  consent_id : bigint <<FK>>
+  created_at : timestamptz
+  status : enum (check)
+}
+
+entity "Bank" as B {
+  *id : bigint <<PK>>
+  --
+  code : text
+  name : text
+  api_base_url : text
+}
+
+entity "BankAccount" as BA {
+  *id : bigint <<PK>>
+  --
+  bank_connection_id : bigint <<FK>>
+  status : enum (check)
+  currency : enum (check)
+  type : enum (check)
+  sub_type : enum (check)
+  nickname : text
+  opening_date : timestamptz
+  ...
+}
+
+entity "Balance" as BL {
+    *id : bigint <<PK>>
+    --
+    bank_account_id : bigint <<FK>>
+    type : enum (check) "InterimAvailable"/"InterimBooked"
+}
+
+entity "IdentificationType" as IT {
+    *id : bigint <<PK>>
+    --
+    name : text
+}
+
+entity "BankAccountIdentificationType" AS BAIT {
+    *id : bigint <<PK>>
+    --
+    bank_account_id : bigint <<FK>>
+    identification_type_id : bigint <<FK>>
+}
+
+
+entity "Transaction" AS T {
+   *id : bigint <<PK>>
+   --
+   bank_account_id : bigint <<FK>>
+   amount : bigint 228
+   currency : enum (check) "RUB"
+   credit_debit_indicator: enum (check) "Credit"
+   status : enum (check) "Booked"
+   booking_date_time : timestamptz
+   value_date_time : timestamptz
+   info : text
+   bank_transaction_code : text "ReceivedCreditTransfer"
+}
+
+entity "PaymentConsent" AS PC {
+    *id : bigint <<PK>>
+    --
+    requester_account_bank_id : bigint <<FK>>
+}
+
+entity "Payment" AS P {
+    *id : bigint <<PK>>
+    --
+    payment_consent_id : bigint <<FK>>
+}
+
+entity "Product" AS PR {
+   *id : bigint <<PK>>
+   --
+   bank_ik : bigint <<FK>>
+   type : enum (check)
+   name:  text "Накопительный депозит",
+   description: text "Выгодная ставка",
+   interest_rate: real 8.50,
+   min_amount: bigint 5000000 (копейках),
+   max_amount: bigint (м.б. null) ,
+   term_months: bigint 12
+}
+
+
+U ||--o{ BC : "has"
+B ||--o{ BC : "linked to"
+B ||--o{ PR : "has"
+BC ||--o{ BA : "has"
+BA ||--o{ T : "transfer"
+BA ||--o{ BAIT : "identifiers using"
+BA ||--o{ BL : "has"
+BAIT ||--o{ IT : "identify"
+BA ||--o{ PC : "requesting"
+
+
+
+@enduml

@@ -1,0 +1,48 @@
+# -------------------
+# Binary files
+# -------------------
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.out
+#/[a-zA-Z0-9_-]*
+
+# -------------------
+# Build folder
+# -------------------
+bin/
+
+# Logs
+*.log
+
+# Archives
+*.zip
+*.tar
+*.tar.gz
+*.rar
+*.7z
+
+# Conf/temp files
+*.json
+*.env
+*.tmp
+*.bak
+*.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.gigaide/
+
+# Sysfiles
+.DS_Store
+Thumbs.db
+
+# Go
+/go.sum
+
+# leave go.mod
+!go.mod

@@ -1,0 +1,6 @@
+env: "local" #local, dev, prod
+storage_path: "./storage/multibank.db"
+http_server:
+  port: 8080
+  timeout: "5s"
+  token_ttl: "24h"
