@@ -22,7 +22,7 @@ func New(storagePath string) (*Storage, error) {
 	}
 
 	// connection params (timeout, wal mode, foreign keys)
-	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)", storagePath)
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(DELETE)&_pragma=foreign_keys(ON)", storagePath)
 
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
