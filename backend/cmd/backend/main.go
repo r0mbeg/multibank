@@ -6,12 +6,14 @@ import (
 	"multibank/backend/internal/config"
 	httpserver "multibank/backend/internal/http-server"
 	"multibank/backend/internal/logger"
-	"multibank/backend/internal/service"
+	"multibank/backend/internal/service/user"
 	"multibank/backend/internal/storage/sqlite"
 	"net/http"
 	"strconv"
 	"time"
 )
+
+// go run ./cmd/backend --config=./config/local.yaml
 
 func main() {
 
@@ -46,10 +48,14 @@ func main() {
 	}
 
 	// repo + service
-	repo := sqlite.NewUserRepo(st.DB())
-	svc := service.New(repo, cfg.HTTPServer.Timeout)
+	repo := sqlite.NewUserRepo(st.DB())           // storage/sqlite
+	svc := user.New(repo, cfg.HTTPServer.Timeout) // service/user
 
-	srv := httpserver.New(svc, cfg.HTTPServer.Timeout)
+	srv := httpserver.New(
+		httpserver.Deps{UserService: svc},
+		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout}, // middleware.Timeout
+	)
+
 	httpSrv := &http.Server{
 		Addr:         ":" + strconv.Itoa(cfg.HTTPServer.Port),
 		Handler:      srv.Handler(),
@@ -58,8 +64,8 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	slog.Info("http server starting", "addr", httpSrv.Addr)
+	slog.Info("http-server server starting", "addr", httpSrv.Addr)
 	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("http server error", "err", err)
+		slog.Error("http-server server error", "err", err)
 	}
 }
