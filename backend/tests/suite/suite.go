@@ -3,6 +3,7 @@ package suite
 import (
 	"context"
 	"log/slog"
+	"multibank/backend/internal/logger"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -64,7 +65,7 @@ func New(t *testing.T) *Suite {
 		t.Fatalf("migrate: %v", err)
 	}
 
-	log := slog.Default()
+	log := logger.Setup(cfg.Level)
 	log.Info("suite: using config",
 		slog.String("env", cfg.Env),
 		slog.String("db", cfg.StoragePath),
