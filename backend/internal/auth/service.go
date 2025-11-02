@@ -28,6 +28,9 @@ func New(log *slog.Logger, userSvc *user.Service, jwt *authjwt.Manager) *Service
 	return &Service{log: log, u: userSvc, jwt: jwt}
 }
 
+// RegisterInput struct for service layer
+// repeats structure RegisterRequest from dto,
+// but must be independent from http-layer
 type RegisterInput struct {
 	Email, FirstName, LastName, Patronymic, BirthDate, Password string
 }

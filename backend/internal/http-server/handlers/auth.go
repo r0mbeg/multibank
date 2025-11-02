@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
+	"multibank/backend/internal/http-server/dto"
 	"net/http"
 	"time"
 
@@ -19,17 +21,23 @@ type AuthDeps struct {
 func RegisterAuthRoutes(r chi.Router, d AuthDeps) {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", func(w http.ResponseWriter, r *http.Request) {
-			var req struct {
-				Email, FirstName, LastName, Patronymic, BirthDate, Password string
-			}
+			var req dto.RegisterRequest
+
 			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 				writeError(w, http.StatusBadRequest, "invalid json")
 				return
 			}
 			u, err := d.Auth.Register(r.Context(), auth.RegisterInput{
-				Email: req.Email, FirstName: req.FirstName, LastName: req.LastName,
-				Patronymic: req.Patronymic, BirthDate: req.BirthDate, Password: req.Password,
+				Email:      req.Email,
+				FirstName:  req.FirstName,
+				LastName:   req.LastName,
+				Patronymic: req.Patronymic,
+				BirthDate:  req.BirthDate,
+				Password:   req.Password,
 			})
+
+			fmt.Printf("user in RegisterAuthRoutes: %+v", u)
+
 			if err != nil {
 				writeError(w, http.StatusBadRequest, err.Error())
 				return

@@ -66,6 +66,11 @@ func New(t *testing.T) *Suite {
 	}
 
 	log := logger.Setup(cfg.Level)
+
+	log = log.With(
+		slog.String("scope", "test"),
+	)
+
 	log.Info("suite: using config",
 		slog.String("env", cfg.Env),
 		slog.String("db", cfg.StoragePath),

@@ -3,6 +3,7 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -13,6 +14,10 @@ import (
 	"multibank/backend/tests/suite"
 )
 
+const (
+	passDefaultLen = 10
+)
+
 func TestHTTP_Register_Login(t *testing.T) {
 	st := suite.New(t)
 	defer st.Cancel()
@@ -20,17 +25,24 @@ func TestHTTP_Register_Login(t *testing.T) {
 	gofakeit.Seed(time.Now().UnixNano())
 
 	email := gofakeit.Email()
-	pass := gofakeit.Password(true, true, true, true, false, 12)
+	firstName := gofakeit.FirstName()
+	lastName := gofakeit.LastName()
+	patronymic := gofakeit.LetterN(1)
+	birthdate := gofakeit.Date().Format("2006-01-02")
+	pass := randomFakePassword()
 
 	// register
 	bodyReg, _ := json.Marshal(map[string]any{
 		"email":      email,
-		"first_name": gofakeit.FirstName(),
-		"last_name":  gofakeit.LastName(),
-		"patronymic": gofakeit.LetterN(1),
-		"birthdate":  gofakeit.Date().Format("2006-01-02"),
+		"first_name": firstName,
+		"last_name":  lastName,
+		"patronymic": patronymic,
+		"birthdate":  birthdate,
 		"password":   pass,
 	})
+
+	fmt.Printf("body in test: %s", bodyReg)
+
 	req, _ := http.NewRequest(http.MethodPost, st.BaseURL+"/auth/register", bytes.NewReader(bodyReg))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := st.Client.Do(req)
@@ -62,4 +74,8 @@ func TestHTTP_Register_Login(t *testing.T) {
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&loginResp))
 	require.NotEmpty(t, loginResp.AccessToken)
+}
+
+func randomFakePassword() string {
+	return gofakeit.Password(true, true, true, true, false, passDefaultLen)
 }

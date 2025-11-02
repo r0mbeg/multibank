@@ -18,6 +18,20 @@ type User struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
+type RegisterRequest struct {
+	Email      string `json:"email"`
+	FirstName  string `json:"first_name"`
+	LastName   string `json:"last_name"`
+	Patronymic string `json:"patronymic"`
+	BirthDate  string `json:"birthdate"`
+	Password   string `json:"password"`
+}
+
+type LoginRequest struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
 func UserFromDomain(d domain.User) User {
 	return User{
 		ID:         d.ID,
