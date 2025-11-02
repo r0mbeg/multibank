@@ -1,7 +1,10 @@
 package storage
 
-import "fmt"
+import (
+	"errors"
+)
 
 var (
-	ErrLabResourceNotFound = fmt.Errorf("user not found")
+	ErrUserExists   = errors.New("user already exists")
+	ErrUserNotFound = errors.New("user not found")
 )

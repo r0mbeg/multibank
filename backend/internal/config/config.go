@@ -17,9 +17,10 @@ type Config struct {
 }
 
 type HTTPServer struct {
-	Port     int           `yaml:"port" env:"MB_HTTP_PORT" env-default:"8080"`
-	Timeout  time.Duration `yaml:"timeout" env:"MB_HTTP_TIMEOUT" env-default:"5s"`
-	TokenTTL time.Duration `yaml:"token_ttl" env:"MB_TOKEN_TTL" env-default:"24h"`
+	Port      int           `yaml:"port" env:"MB_HTTP_PORT" env-default:"8080"`
+	Timeout   time.Duration `yaml:"timeout" env:"MB_HTTP_TIMEOUT" env-default:"5s"`
+	TokenTTL  time.Duration `yaml:"token_ttl" env:"MB_TOKEN_TTL" env-default:"24h"`
+	JWTSecret string        `yaml:"jwt_secret" env:"MB_AUTH_SECRET" env-required:"true"`
 }
 
 type Logger struct {

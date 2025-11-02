@@ -3,6 +3,8 @@ package main
 import (
 	"context"
 	"log/slog"
+	"multibank/backend/internal/auth"
+	"multibank/backend/internal/auth/jwt"
 	"multibank/backend/internal/config"
 	httpserver "multibank/backend/internal/http-server"
 	"multibank/backend/internal/logger"
@@ -48,12 +50,21 @@ func main() {
 	}
 
 	// repo + service
-	repo := sqlite.NewUserRepo(st.DB())           // storage/sqlite
-	svc := user.New(repo, cfg.HTTPServer.Timeout) // service/user
+	userRepo := sqlite.NewUserRepo(st.DB()) // storage/sqlite
+	userSvc := user.New(log, userRepo)      // service/user
+
+	// user auth service
+	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
+	authSvc := auth.New(log, userSvc, jwtMgr)
 
 	srv := httpserver.New(
-		httpserver.Deps{UserService: svc},
-		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout}, // middleware.Timeout
+		httpserver.Deps{
+			Logger:      log,
+			UserService: userSvc,
+			AuthService: authSvc,
+			JWT:         jwtMgr,
+		},
+		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout},
 	)
 
 	httpSrv := &http.Server{
@@ -64,8 +75,8 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	slog.Info("http-server server starting", "addr", httpSrv.Addr)
+	//log.Info("http-server server starting", slog.String("addr", httpSrv.Addr))
 	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-		slog.Error("http-server server error", "err", err)
+		log.Error("http-server server error", logger.Err(err))
 	}
 }

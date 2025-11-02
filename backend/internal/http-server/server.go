@@ -1,6 +1,9 @@
 package httpserver
 
 import (
+	"log/slog"
+	"multibank/backend/internal/auth"
+	"multibank/backend/internal/auth/jwt"
 	stdhttp "net/http"
 	"time"
 
@@ -8,7 +11,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"multibank/backend/internal/http-server/handlers"
-	userSvc "multibank/backend/internal/service/user"
+	mwLogger "multibank/backend/internal/http-server/middleware/logger"
+	"multibank/backend/internal/service/user"
 )
 
 type Server struct {
@@ -16,8 +20,10 @@ type Server struct {
 }
 
 type Deps struct {
-	UserService *userSvc.Service
-	// Добавишь сюда другие сервисы по мере появления.
+	Logger      *slog.Logger
+	UserService *user.Service
+	AuthService *auth.Service
+	JWT         *jwt.Manager
 }
 
 type Options struct {
@@ -30,7 +36,7 @@ func New(deps Deps, opts Options) *Server {
 	// базовые middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(middleware.Logger)
+	r.Use(mwLogger.New(deps.Logger))
 	r.Use(middleware.Recoverer)
 
 	// таймаут запросов — один раз на уровне HTTP
@@ -39,6 +45,13 @@ func New(deps Deps, opts Options) *Server {
 	}
 
 	// Регистрация feature-роутов (каждая фича сама вешает свои пути)
+	//handlers.RegisterUserRoutes(r, deps.UserService)
+
+	// Registration auth routes
+	handlers.RegisterAuthRoutes(r, handlers.AuthDeps{
+		Auth: deps.AuthService,
+		JWT:  deps.JWT,
+	})
 	handlers.RegisterUserRoutes(r, deps.UserService)
 
 	return &Server{mux: r}
