@@ -31,10 +31,11 @@ func New(log *slog.Logger) func(next http.Handler) http.Handler {
 				slog.String("method", r.Method),
 				slog.String("path", r.URL.Path),
 				slog.Int("status", ww.Status()),
-				slog.Int("bytes", ww.BytesWritten()),
-				slog.String("remote", r.RemoteAddr),
-				slog.String("agent", r.UserAgent()),
-				slog.String("request_id", middleware.GetReqID(r.Context())),
+				// can be uncommented later
+				//slog.Int("bytes", ww.BytesWritten()),
+				//slog.String("remote", r.RemoteAddr),
+				//slog.String("agent", r.UserAgent()),
+				//slog.String("request_id", middleware.GetReqID(r.Context())),
 				slog.Duration("duration", duration),
 			)
 

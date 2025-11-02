@@ -57,6 +57,12 @@ func New(deps Deps, opts Options) *Server {
 		handlers.RegisterUserRoutes(rr, deps.UserService)
 	})
 
+	// Protected routes /me/*
+	r.Route("/me", func(rr chi.Router) {
+		rr.Use(authmw.Auth(deps.JWT))
+		handlers.RegisterMeRoutes(rr, deps.UserService)
+	})
+
 	// swagger ui
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 

@@ -9,18 +9,18 @@ import (
 	"strconv"
 
 	authmw "multibank/backend/internal/auth/middleware"
-	"multibank/backend/internal/service/user"
+	usersvc "multibank/backend/internal/service/user"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type UserHandler struct {
-	svc *user.Service
+	svc *usersvc.Service
 }
 
 // RegisterUserRoutes registers user handlers
 // JWT is attached in server.go to the /users
-func RegisterUserRoutes(r chi.Router, svc *user.Service) {
+func RegisterUserRoutes(r chi.Router, svc *usersvc.Service) {
 	h := &UserHandler{svc: svc}
 	r.Get("/{id}", h.GetByID)
 	// ещё какие-то хендлеры
@@ -28,7 +28,7 @@ func RegisterUserRoutes(r chi.Router, svc *user.Service) {
 
 // GetByID godoc
 // @Summary      Get user by ID
-// @Description  Доступ только владельцу токена (id должен совпадать).
+// @Description  Access is restricted by the token owner (the ID must match)
 // @Tags         users
 // @Security     BearerAuth
 // @Produce      json
@@ -57,7 +57,7 @@ func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 	u, err := h.svc.GetByID(r.Context(), id)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
+		if errors.Is(err, usersvc.ErrUserNotFound) {
 			httputils.WriteError(w, http.StatusNotFound, "user not found")
 			return
 		}
