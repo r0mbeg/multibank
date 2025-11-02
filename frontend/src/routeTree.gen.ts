@@ -13,7 +13,11 @@ import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth.index'
+import { Route as AuthTransactionsRouteImport } from './routes/_auth.transactions'
+import { Route as AuthShowcaseRouteImport } from './routes/_auth.showcase'
+import { Route as AuthConsentsRouteImport } from './routes/_auth.consents'
 import { Route as AuthBanksRouteImport } from './routes/_auth.banks'
+import { Route as AuthAccountsRouteImport } from './routes/_auth.accounts'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -34,22 +38,50 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AuthRoute,
 } as any)
+const AuthTransactionsRoute = AuthTransactionsRouteImport.update({
+  id: '/transactions',
+  path: '/transactions',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthShowcaseRoute = AuthShowcaseRouteImport.update({
+  id: '/showcase',
+  path: '/showcase',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthConsentsRoute = AuthConsentsRouteImport.update({
+  id: '/consents',
+  path: '/consents',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthBanksRoute = AuthBanksRouteImport.update({
   id: '/banks',
   path: '/banks',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthAccountsRoute = AuthAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
   getParentRoute: () => AuthRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/accounts': typeof AuthAccountsRoute
   '/banks': typeof AuthBanksRoute
+  '/consents': typeof AuthConsentsRoute
+  '/showcase': typeof AuthShowcaseRoute
+  '/transactions': typeof AuthTransactionsRoute
   '/': typeof AuthIndexRoute
 }
 export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/accounts': typeof AuthAccountsRoute
   '/banks': typeof AuthBanksRoute
+  '/consents': typeof AuthConsentsRoute
+  '/showcase': typeof AuthShowcaseRoute
+  '/transactions': typeof AuthTransactionsRoute
   '/': typeof AuthIndexRoute
 }
 export interface FileRoutesById {
@@ -57,20 +89,44 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/_auth/accounts': typeof AuthAccountsRoute
   '/_auth/banks': typeof AuthBanksRoute
+  '/_auth/consents': typeof AuthConsentsRoute
+  '/_auth/showcase': typeof AuthShowcaseRoute
+  '/_auth/transactions': typeof AuthTransactionsRoute
   '/_auth/': typeof AuthIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/login' | '/register' | '/banks' | '/'
+  fullPaths:
+    | '/login'
+    | '/register'
+    | '/accounts'
+    | '/banks'
+    | '/consents'
+    | '/showcase'
+    | '/transactions'
+    | '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/login' | '/register' | '/banks' | '/'
+  to:
+    | '/login'
+    | '/register'
+    | '/accounts'
+    | '/banks'
+    | '/consents'
+    | '/showcase'
+    | '/transactions'
+    | '/'
   id:
     | '__root__'
     | '/_auth'
     | '/login'
     | '/register'
+    | '/_auth/accounts'
     | '/_auth/banks'
+    | '/_auth/consents'
+    | '/_auth/showcase'
+    | '/_auth/transactions'
     | '/_auth/'
   fileRoutesById: FileRoutesById
 }
@@ -110,6 +166,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/transactions': {
+      id: '/_auth/transactions'
+      path: '/transactions'
+      fullPath: '/transactions'
+      preLoaderRoute: typeof AuthTransactionsRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/showcase': {
+      id: '/_auth/showcase'
+      path: '/showcase'
+      fullPath: '/showcase'
+      preLoaderRoute: typeof AuthShowcaseRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/_auth/consents': {
+      id: '/_auth/consents'
+      path: '/consents'
+      fullPath: '/consents'
+      preLoaderRoute: typeof AuthConsentsRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/_auth/banks': {
       id: '/_auth/banks'
       path: '/banks'
@@ -117,16 +194,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthBanksRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/_auth/accounts': {
+      id: '/_auth/accounts'
+      path: '/accounts'
+      fullPath: '/accounts'
+      preLoaderRoute: typeof AuthAccountsRouteImport
+      parentRoute: typeof AuthRoute
+    }
   }
 }
 
 interface AuthRouteChildren {
+  AuthAccountsRoute: typeof AuthAccountsRoute
   AuthBanksRoute: typeof AuthBanksRoute
+  AuthConsentsRoute: typeof AuthConsentsRoute
+  AuthShowcaseRoute: typeof AuthShowcaseRoute
+  AuthTransactionsRoute: typeof AuthTransactionsRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
+  AuthAccountsRoute: AuthAccountsRoute,
   AuthBanksRoute: AuthBanksRoute,
+  AuthConsentsRoute: AuthConsentsRoute,
+  AuthShowcaseRoute: AuthShowcaseRoute,
+  AuthTransactionsRoute: AuthTransactionsRoute,
   AuthIndexRoute: AuthIndexRoute,
 }
 
