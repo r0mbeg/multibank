@@ -1,5 +1,14 @@
+export type RegisterForm = {
+    first_name: string,
+    last_name: string,
+    email: string,
+    patronymic: string,
+    password: string,
+    birthdate: string,
+}
+
 export type LoginForm = {
-    login: string,
+    email: string,
     password: string,
 }
 
