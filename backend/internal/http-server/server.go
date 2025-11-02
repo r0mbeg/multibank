@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 
+	"github.com/go-chi/cors"
 	"log/slog"
 	"multibank/backend/internal/auth"
 	"multibank/backend/internal/auth/jwt"
@@ -34,6 +35,16 @@ type Options struct {
 
 func New(deps Deps, opts Options) *Server {
 	r := chi.NewRouter()
+
+	// CORS settings
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173", "http://127.0.0.1:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true, // если отправляешь куки/авторизацию через fetch(..., credentials:'include')
+		MaxAge:           300,  // кэш preflight в секундах
+	}))
 
 	// базовые middlewares
 	r.Use(middleware.RequestID)
