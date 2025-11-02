@@ -66,3 +66,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# sqlite3
+*.db
+*.db-shm
+*.db-wal

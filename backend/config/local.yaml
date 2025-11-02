@@ -3,4 +3,5 @@ storage_path: "./storage/multibank.db"
 http_server:
   port: 8080
   timeout: "5s"
+  jwt_secret: "multibank auth secret"
   token_ttl: "24h"

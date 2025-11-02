@@ -1,4 +1,4 @@
-package storage
+package sqlite
 
 import (
 	"context"
@@ -22,7 +22,7 @@ func New(storagePath string) (*Storage, error) {
 	}
 
 	// connection params (timeout, wal mode, foreign keys)
-	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)&_pragma=foreign_keys(ON)", storagePath)
+	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(DELETE)&_pragma=foreign_keys(ON)", storagePath)
 
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
@@ -45,9 +45,8 @@ func New(storagePath string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) Close() error {
-	return s.db.Close()
-}
+func (s *Storage) Close() error { return s.db.Close() }
+func (s *Storage) DB() *sql.DB  { return s.db }
 
 // Migrate - idempotent schema initialization/migration.
 func (s *Storage) Migrate(ctx context.Context) error {
@@ -70,7 +69,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 	}
 
 	// zero migration (idempotent IF NOT EXISTS)
-	if _, err = tx.Exec(`
+	if _, err = tx.ExecContext(ctx, `
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     email         TEXT    NOT NULL UNIQUE,
@@ -83,17 +82,6 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );
 `); err != nil {
-		return err
-	}
-
-	// auto update updated_at
-	if _, err = tx.ExecContext(ctx, `
-CREATE TRIGGER IF NOT EXISTS users_set_updated_at
-AFTER UPDATE ON users
-FOR EACH ROW
-BEGIN
-    UPDATE users SET updated_at = datetime('now') WHERE id = NEW.id;
-END;`); err != nil {
 		return err
 	}
 
