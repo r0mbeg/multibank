@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/go-chi/chi/v5/middleware"
 	"log/slog"
+
+	"github.com/go-chi/chi/v5/middleware"
 )
 
 // New возвращает chi-совместимый middleware,

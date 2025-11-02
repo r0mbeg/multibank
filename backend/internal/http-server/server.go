@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"log/slog"
 	"multibank/backend/internal/auth"
@@ -37,24 +38,27 @@ func New(deps Deps, opts Options) *Server {
 	// базовые middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
-	r.Use(mwLogger.New(deps.Logger)) // твой middleware, пишущий через slog
+	r.Use(mwLogger.New(deps.Logger)) // middleware with metadata of requests
 	r.Use(middleware.Recoverer)
 
 	if opts.RequestTimeout > 0 {
 		r.Use(middleware.Timeout(opts.RequestTimeout))
 	}
 
-	// Публичные маршруты (регистрация/логин)
+	// Public routes (registration/login)
 	handlers.RegisterAuthRoutes(r, handlers.AuthDeps{
 		Auth: deps.AuthService,
 		JWT:  deps.JWT,
 	})
 
-	// Защищённые маршруты /users/*
+	// Protected routes /users/*
 	r.Route("/users", func(rr chi.Router) {
 		rr.Use(authmw.Auth(deps.JWT))
 		handlers.RegisterUserRoutes(rr, deps.UserService)
 	})
+
+	// swagger ui
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	return &Server{mux: r}
 }

@@ -1,9 +1,19 @@
+// @title           Multibank API
+// @version         1.0
+// @description     API для аутентификации и пользователей.
+// @BasePath        /
+// @schemes         http
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
 	"context"
 	"errors"
 	"log/slog"
+	_ "multibank/backend/docs"
 	"multibank/backend/internal/auth"
 	"multibank/backend/internal/auth/jwt"
 	"multibank/backend/internal/config"

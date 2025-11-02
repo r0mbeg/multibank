@@ -2,60 +2,69 @@
 package handlers
 
 import (
-	"encoding/json"
 	"errors"
 	"multibank/backend/internal/http-server/dto"
+	httputils "multibank/backend/internal/http-server/utils"
 	"net/http"
 	"strconv"
 
-	"github.com/go-chi/chi/v5"
 	authmw "multibank/backend/internal/auth/middleware"
 	"multibank/backend/internal/service/user"
+
+	"github.com/go-chi/chi/v5"
 )
 
-// Регистрирует хендлеры пользователей (без привязки к JWT-менеджеру).
-// Авторизацию вешаем в server.go на подроут /users.
+type UserHandler struct {
+	svc *user.Service
+}
+
+// RegisterUserRoutes registers user handlers
+// JWT is attached in server.go to the /users
 func RegisterUserRoutes(r chi.Router, svc *user.Service) {
-	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
-		idStr := chi.URLParam(r, "id")
-		id, err := strconv.ParseInt(idStr, 10, 64)
-		if err != nil || id <= 0 {
-			writeError(w, http.StatusBadRequest, "invalid id")
-			return
-		}
-
-		// userID из контекста положил JWT-middleware
-		authID, ok := authmw.UserIDFromContext(r.Context())
-		if !ok || authID != id {
-			writeError(w, http.StatusForbidden, "access denied")
-			return
-		}
-
-		u, err := svc.GetByID(r.Context(), id)
-		if err != nil {
-			if errors.Is(err, user.ErrUserNotFound) {
-				writeError(w, http.StatusNotFound, "user not found")
-				return
-			}
-			writeError(w, http.StatusInternalServerError, "internal error")
-			return
-		}
-
-		writeJSON(w, http.StatusOK, dto.UserFromDomain(u))
-	})
+	h := &UserHandler{svc: svc}
+	r.Get("/{id}", h.GetByID)
+	// ещё какие-то хендлеры
 }
 
-// Локальные утилиты хендлеров.
-// Если понадобятся в нескольких файлах, можно вынести в internal/http-server/httputil.go.
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-func writeError(w http.ResponseWriter, status int, msg string) {
-	type errResp struct {
-		Error string `json:"error"`
+// GetByID godoc
+// @Summary      Get user by ID
+// @Description  Доступ только владельцу токена (id должен совпадать).
+// @Tags         users
+// @Security     BearerAuth
+// @Produce      json
+// @Param        id   path      int  true  "User ID"
+// @Success      200  {object}  dto.User
+// @Failure      400  {object}  map[string]string
+// @Failure      401  {object}  map[string]string
+// @Failure      403  {object}  map[string]string
+// @Failure      404  {object}  map[string]string
+// @Router       /users/{id} [get]
+func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
+	idStr := chi.URLParam(r, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id <= 0 {
+		httputils.WriteError(w, http.StatusBadRequest, "invalid id")
+		return
 	}
-	writeJSON(w, status, errResp{Error: msg})
+
+	// userID from Context (which was placed by JWT-middleware)
+	// можно смотреть только нашего пользователя
+	authID, ok := authmw.UserIDFromContext(r.Context())
+	if !ok || authID != id {
+		httputils.WriteError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
+	u, err := h.svc.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			httputils.WriteError(w, http.StatusNotFound, "user not found")
+			return
+		}
+		httputils.WriteError(w, http.StatusInternalServerError, "internal error")
+		return
+	}
+
+	httputils.WriteJSON(w, http.StatusOK, dto.UserFromDomain(u))
+
 }

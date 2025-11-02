@@ -15,7 +15,6 @@ import (
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrEmailAlreadyUsed   = errors.New("email already used")
 )
 
 type Service struct {
