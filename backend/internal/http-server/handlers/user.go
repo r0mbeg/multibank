@@ -4,36 +4,36 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"multibank/backend/internal/http-server/dto"
 	"net/http"
 	"strconv"
 
 	"github.com/go-chi/chi/v5"
-
-	"multibank/backend/internal/http-server/dto"
-	userSvc "multibank/backend/internal/service/user"
+	authmw "multibank/backend/internal/auth/middleware"
+	"multibank/backend/internal/service/user"
 )
 
-func RegisterUserRoutes(r chi.Router, svc *userSvc.Service) {
-	r.Route("/users", func(r chi.Router) {
-		r.Get("/{id}", getUserByID(svc))
-		// r.Post("/", createUser(svc))
-		// r.Put("/{id}/names", updateNames(svc))
-		// r.Delete("/{id}", deleteUser(svc))
-		// r.Get("/", listUsers(svc))
-	})
-}
-
-func getUserByID(svc *userSvc.Service) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+// Регистрирует хендлеры пользователей (без привязки к JWT-менеджеру).
+// Авторизацию вешаем в server.go на подроут /users.
+func RegisterUserRoutes(r chi.Router, svc *user.Service) {
+	r.Get("/{id}", func(w http.ResponseWriter, r *http.Request) {
+		idStr := chi.URLParam(r, "id")
+		id, err := strconv.ParseInt(idStr, 10, 64)
 		if err != nil || id <= 0 {
 			writeError(w, http.StatusBadRequest, "invalid id")
 			return
 		}
 
+		// userID из контекста положил JWT-middleware
+		authID, ok := authmw.UserIDFromContext(r.Context())
+		if !ok || authID != id {
+			writeError(w, http.StatusForbidden, "access denied")
+			return
+		}
+
 		u, err := svc.GetByID(r.Context(), id)
 		if err != nil {
-			if errors.Is(err, userSvc.ErrUserNotFound) {
+			if errors.Is(err, user.ErrUserNotFound) {
 				writeError(w, http.StatusNotFound, "user not found")
 				return
 			}
@@ -41,14 +41,12 @@ func getUserByID(svc *userSvc.Service) http.HandlerFunc {
 			return
 		}
 
-		// Маппим domain → DTO (при желании можно отдавать domain как есть)
-		resp := dto.UserFromDomain(u)
-		writeJSON(w, http.StatusOK, resp)
-	}
+		writeJSON(w, http.StatusOK, dto.UserFromDomain(u))
+	})
 }
 
 // Локальные утилиты хендлеров.
-// Если понадобятся в нескольких файлах — вынеси в internal/http-server/httputil.go.
+// Если понадобятся в нескольких файлах, можно вынести в internal/http-server/httputil.go.
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -56,5 +54,8 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 }
 
 func writeError(w http.ResponseWriter, status int, msg string) {
-	writeJSON(w, status, map[string]string{"error": msg})
+	type errResp struct {
+		Error string `json:"error"`
+	}
+	writeJSON(w, status, errResp{Error: msg})
 }

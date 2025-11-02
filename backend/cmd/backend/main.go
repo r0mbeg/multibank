@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"multibank/backend/internal/auth"
 	"multibank/backend/internal/auth/jwt"
@@ -76,7 +77,7 @@ func main() {
 	}
 
 	//log.Info("http-server server starting", slog.String("addr", httpSrv.Addr))
-	if err := httpSrv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+	if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Error("http-server server error", logger.Err(err))
 	}
 }
