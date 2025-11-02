@@ -13,6 +13,7 @@ import {
 } from "@mui/material";
 import {VisibilityOff, Visibility, WarningAmber} from "@mui/icons-material";
 import ErrorText from "../components/ErrorText.tsx";
+import type {LoginForm} from "../types/types.ts";
 
 export const Route = createFileRoute('/login')({
     component: LoginPage,
@@ -20,11 +21,6 @@ export const Route = createFileRoute('/login')({
         redirect: (typeof search.redirect === 'string' ? search.redirect : undefined) as string | undefined,
     })
 })
-
-type Inputs = {
-    login: string
-    password: string
-}
 
 const CustomLink = createLink(MUILink);
 
@@ -38,15 +34,15 @@ function LoginPage() {
         register,
         handleSubmit,
         formState: { errors },
-    } = useForm<Inputs>()
+    } = useForm<LoginForm>()
 
-    const onSubmit: SubmitHandler<Inputs> = (data) => {
+    const onSubmit: SubmitHandler<LoginForm> = (data) => {
         login();
         navigate({to: redirect || '/'})
         console.log(data)
     }
 
-    const onError: SubmitErrorHandler<Inputs> = (errors) => {
+    const onError: SubmitErrorHandler<LoginForm> = (errors) => {
         console.log(errors)
     }
 
@@ -61,9 +57,9 @@ function LoginPage() {
     };
 
     return (
-        <div style={{ height: "100%", display: "flex", flexDirection: 'column', justifyContent: "center", alignItems: "center" }}>
-            <h1 style={{marginBottom: '64px', fontSize: '64px'}}>Multibank APP</h1>
-            <form onSubmit={handleSubmit(onSubmit, onError)} style={{display: 'flex', flexDirection: 'column', maxWidth: '320px', rowGap: '12px'}}>
+        <div className={'flex flex-col justify-center items-center h-full'}>
+            <h1 className={'text-6xl mb-8'}>Multibank APP</h1>
+            <form className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'} onSubmit={handleSubmit(onSubmit, onError)}>
                 <Controller
                     name='login'
                     control={control}
