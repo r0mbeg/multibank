@@ -10,16 +10,13 @@
 package main
 
 import (
-	"context"
 	"log/slog"
 	_ "multibank/backend/docs"
 	"multibank/backend/internal/app"
 	"multibank/backend/internal/config"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/shutdown"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 )
 
 // go run ./cmd/backend --config=./config/local.yaml
@@ -43,16 +40,5 @@ func main() {
 	go application.MustRun()
 
 	// graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	sig := <-stop
-
-	log.Info("received shutdown signal", slog.String("signal", sig.String()))
-
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	if err := application.Stop(ctx); err != nil {
-		log.Error("graceful shutdown failed", slog.Any("err", err))
-	}
+	shutdown.Wait(application, log)
 }
