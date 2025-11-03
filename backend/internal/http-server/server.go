@@ -1,6 +1,10 @@
+// internal/http-server/server.go
+
 package httpserver
 
 import (
+	"multibank/backend/internal/service/auth/jwt"
+	authmw "multibank/backend/internal/service/auth/middleware"
 	stdhttp "net/http"
 	"time"
 
@@ -8,14 +12,11 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 
-	"github.com/go-chi/cors"
 	"log/slog"
-	"multibank/backend/internal/auth"
-	"multibank/backend/internal/auth/jwt"
-	authmw "multibank/backend/internal/auth/middleware"
 	"multibank/backend/internal/http-server/handlers"
 	mwLogger "multibank/backend/internal/http-server/middleware/logger"
-	"multibank/backend/internal/service/user"
+
+	"github.com/go-chi/cors"
 )
 
 type Server struct {
@@ -24,8 +25,8 @@ type Server struct {
 
 type Deps struct {
 	Logger      *slog.Logger
-	UserService *user.Service
-	AuthService *auth.Service
+	UserService handlers.User
+	AuthService handlers.Auth
 	JWT         *jwt.Manager
 }
 
@@ -46,7 +47,7 @@ func New(deps Deps, opts Options) *Server {
 		MaxAge:           300,  // кэш preflight в секундах
 	}))
 
-	// базовые middlewares
+	// basic middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(mwLogger.New(deps.Logger)) // middleware with metadata of requests
@@ -57,9 +58,14 @@ func New(deps Deps, opts Options) *Server {
 	}
 
 	// Public routes (registration/login)
-	handlers.RegisterAuthRoutes(r, handlers.AuthDeps{
-		Auth: deps.AuthService,
-		JWT:  deps.JWT,
+	/*
+		handlers.RegisterAuthRoutes(r, handlers.AuthDeps{
+			Auth: deps.AuthService,
+			JWT:  deps.JWT,
+		})*/
+	r.Route("/auth", func(rr chi.Router) {
+		// rr.Use(authmw.Auth(deps.JWT)) DO NOT NEED !!!
+		handlers.RegisterAuthRoutes(rr, deps.AuthService, deps.JWT)
 	})
 
 	// Protected routes /users/*

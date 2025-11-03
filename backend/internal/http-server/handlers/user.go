@@ -2,25 +2,32 @@
 package handlers
 
 import (
+	"context"
 	"errors"
+	"multibank/backend/internal/domain"
 	"multibank/backend/internal/http-server/dto"
 	httputils "multibank/backend/internal/http-server/utils"
+	authmw "multibank/backend/internal/service/auth/middleware"
 	"net/http"
 	"strconv"
 
-	authmw "multibank/backend/internal/auth/middleware"
 	usersvc "multibank/backend/internal/service/user"
 
 	"github.com/go-chi/chi/v5"
 )
 
+// thin interface with only 1 method
+type User interface {
+	GetByID(ctx context.Context, id int64) (domain.User, error)
+}
+
 type UserHandler struct {
-	svc *usersvc.Service
+	svc User
 }
 
 // RegisterUserRoutes registers user handlers
 // JWT is attached in server.go to the /users
-func RegisterUserRoutes(r chi.Router, svc *usersvc.Service) {
+func RegisterUserRoutes(r chi.Router, svc User) {
 	h := &UserHandler{svc: svc}
 	r.Get("/{id}", h.GetByID)
 	// ещё какие-то хендлеры

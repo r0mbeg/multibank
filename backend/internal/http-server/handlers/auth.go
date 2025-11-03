@@ -2,35 +2,47 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"multibank/backend/internal/domain"
 	"multibank/backend/internal/http-server/dto"
 	httputils "multibank/backend/internal/http-server/utils"
+	"multibank/backend/internal/service/auth"
+	"multibank/backend/internal/service/auth/jwt"
+	"multibank/backend/internal/service/user"
 	"net/http"
 	"time"
-
-	"multibank/backend/internal/auth"
-	"multibank/backend/internal/auth/jwt"
 
 	"github.com/go-chi/chi/v5"
 )
 
-type AuthDeps struct {
-	Auth *auth.Service
-	JWT  *jwt.Manager
+// Interface Auth describes what handler needs from auth layer
+type Auth interface {
+	Register(ctx context.Context, in auth.RegisterInput) (domain.User, error)
+	Login(ctx context.Context, email, password string) (string, error)
 }
 
 type AuthHandler struct {
-	auth *auth.Service
+	auth Auth
 	jwt  *jwt.Manager
 }
 
-func RegisterAuthRoutes(r chi.Router, d AuthDeps) {
-	h := &AuthHandler{auth: d.Auth, jwt: d.JWT}
+/*
+func NewAuthHandler(a Auth, j *jwt.Manager) *AuthHandler {
+	return &AuthHandler{auth: a, jwt: j}
+}*/
 
-	r.Route("/auth", func(r chi.Router) {
-		r.Post("/register", h.Register)
-		r.Post("/login", h.Login)
-	})
+func RegisterAuthRoutes(r chi.Router, a Auth, j *jwt.Manager) {
+	h := &AuthHandler{auth: a, jwt: j}
+	r.Post("/register", h.Register)
+	r.Post("/login", h.Login)
+
+	/*
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/register", h.Register)
+			r.Post("/login", h.Login)
+		})*/
 }
 
 // Register godoc
@@ -59,7 +71,12 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 		Password:   req.Password,
 	})
 	if err != nil {
-		httputils.WriteError(w, http.StatusBadRequest, err.Error())
+		switch {
+		case errors.Is(err, user.ErrEmailAlreadyUsed):
+			httputils.WriteError(w, http.StatusConflict, user.ErrEmailAlreadyUsed.Error())
+		default:
+			httputils.WriteError(w, http.StatusBadRequest, "registration failed")
+		}
 		return
 	}
 
@@ -95,7 +112,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	tok, err := h.auth.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
-		httputils.WriteError(w, http.StatusUnauthorized, "invalid credentials")
+		httputils.WriteError(w, http.StatusUnauthorized, auth.ErrInvalidCredentials.Error())
 		return
 	}
 

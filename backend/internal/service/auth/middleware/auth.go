@@ -2,10 +2,9 @@ package mw
 
 import (
 	"context"
+	authjwt "multibank/backend/internal/service/auth/jwt"
 	"net/http"
 	"strings"
-
-	authjwt "multibank/backend/internal/auth/jwt"
 )
 
 // ctxKey — типизированный ключ для контекста

@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/service/auth"
+	"multibank/backend/internal/service/auth/jwt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,8 +16,6 @@ import (
 
 	httpserver "multibank/backend/internal/http-server"
 
-	"multibank/backend/internal/auth"
-	"multibank/backend/internal/auth/jwt"
 	"multibank/backend/internal/config"
 	usersvc "multibank/backend/internal/service/user"
 	"multibank/backend/internal/storage/sqlite"

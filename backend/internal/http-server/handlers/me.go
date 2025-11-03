@@ -1,30 +1,33 @@
+// internal/http-server/handlers/me.go
+
 package handlers
 
 import (
-	authmw "multibank/backend/internal/auth/middleware"
+	"errors"
 	"multibank/backend/internal/http-server/dto"
 	httputils "multibank/backend/internal/http-server/utils"
-	"multibank/backend/internal/service/user"
+	authmw "multibank/backend/internal/service/auth/middleware"
+	usersvc "multibank/backend/internal/service/user"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 )
 
 type MeHandler struct {
-	svc *user.Service
+	svc User
 }
 
 // RegisterMeRoutes registers ME handlers
 // JWT is attached in server.go to the /me
-func RegisterMeRoutes(r chi.Router, svc *user.Service) {
-	h := MeHandler{svc: svc}
+func RegisterMeRoutes(r chi.Router, svc User) {
+	h := &MeHandler{svc: svc}
 	r.Get("/", h.GetMe)
 }
 
 // GetMe godoc
 // @Summary      Get current user
 // @Description  Возвращает профиль текущего аутентифицированного пользователя
-// @Tags         users
+// @Tags         me
 // @Security     BearerAuth
 // @Produce      json
 // @Success      200  {object}  dto.User
@@ -42,6 +45,10 @@ func (h *MeHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	u, err := h.svc.GetByID(r.Context(), userID)
 	if err != nil {
+		if errors.Is(err, usersvc.ErrUserNotFound) {
+			httputils.WriteError(w, http.StatusNotFound, "user not found")
+			return
+		}
 		httputils.WriteError(w, http.StatusInternalServerError, "internal error")
 		return
 	}

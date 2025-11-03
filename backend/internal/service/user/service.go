@@ -36,14 +36,25 @@ func New(log *slog.Logger, repo Repository) *Service {
 func (s *Service) Create(ctx context.Context, u domain.User) (int64, error) {
 	const op = "service.user.Create"
 
+	log := s.log.With(
+		slog.String("op", op),
+		slog.String("email", u.Email),
+	)
+
+	log.Info("creating new user")
+
 	id, err := s.repo.Create(ctx, u)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
-			s.log.Warn("email already used", logger.Err(err))
+			log.Warn("email already used", logger.Err(err))
 			return 0, fmt.Errorf("%s: %w", op, ErrEmailAlreadyUsed)
 		}
+		log.Error("failed to create user", logger.Err(err))
 		return 0, fmt.Errorf("%s: %w", op, err)
 	}
+
+	log.Info("user created")
+
 	return id, nil
 }
 

@@ -14,11 +14,11 @@ import (
 	"errors"
 	"log/slog"
 	_ "multibank/backend/docs"
-	"multibank/backend/internal/auth"
-	"multibank/backend/internal/auth/jwt"
 	"multibank/backend/internal/config"
 	httpserver "multibank/backend/internal/http-server"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/service/auth"
+	"multibank/backend/internal/service/auth/jwt"
 	"multibank/backend/internal/service/user"
 	"multibank/backend/internal/storage/sqlite"
 	"net/http"
@@ -71,8 +71,8 @@ func main() {
 	srv := httpserver.New(
 		httpserver.Deps{
 			Logger:      log,
-			UserService: userSvc,
-			AuthService: authSvc,
+			UserService: userSvc, // userSvc implements handlers.User
+			AuthService: authSvc, // authSvc implements handlers.Auth
 			JWT:         jwtMgr,
 		},
 		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout},
