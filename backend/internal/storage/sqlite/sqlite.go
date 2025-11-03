@@ -50,6 +50,7 @@ func (s *Storage) DB() *sql.DB  { return s.db }
 
 // Migrate - idempotent schema initialization/migration.
 func (s *Storage) Migrate(ctx context.Context) error {
+	// TODO add op
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
