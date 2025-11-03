@@ -11,18 +11,14 @@ package main
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	_ "multibank/backend/docs"
+	"multibank/backend/internal/app"
 	"multibank/backend/internal/config"
-	httpserver "multibank/backend/internal/http-server"
 	"multibank/backend/internal/logger"
-	"multibank/backend/internal/service/auth"
-	"multibank/backend/internal/service/auth/jwt"
-	"multibank/backend/internal/service/user"
-	"multibank/backend/internal/storage/sqlite"
-	"net/http"
-	"strconv"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -36,58 +32,27 @@ func main() {
 	// setup logger
 	log := logger.Setup(cfg.Logger.Level)
 
-	// connect to db
-	st, err := sqlite.New(cfg.StoragePath)
+	// app building
+	application, err := app.New(log, cfg)
 	if err != nil {
-		log.Error("failed to init storage", "error", err)
-		return
-	}
-	defer st.Close()
-
-	log.Info("starting multibank backend",
-		slog.String("env", cfg.Env),
-		slog.String("storage_path", cfg.StoragePath),
-		slog.String("logger_level", cfg.Logger.LevelString),
-		slog.Int("http_server_port", cfg.HTTPServer.Port),
-		slog.String("http_server_timeout", cfg.HTTPServer.Timeout.String()),
-		slog.String("http_server_token_ttl", cfg.HTTPServer.TokenTTL.String()),
-	)
-
-	ctx := context.Background()
-
-	if err := st.Migrate(ctx); err != nil {
-		log.Error("migrate", "err", err)
-		return
+		log.Error("failed to init app", slog.Any("err", err))
+		os.Exit(1)
 	}
 
-	// repo + service
-	userRepo := sqlite.NewUserRepo(st.DB()) // storage/sqlite
-	userSvc := user.New(log, userRepo)      // service/user
+	// app start
+	go application.MustRun()
 
-	// user auth service
-	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
-	authSvc := auth.New(log, userSvc, jwtMgr)
+	// graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+	sig := <-stop
 
-	srv := httpserver.New(
-		httpserver.Deps{
-			Logger:      log,
-			UserService: userSvc, // userSvc implements handlers.User
-			AuthService: authSvc, // authSvc implements handlers.Auth
-			JWT:         jwtMgr,
-		},
-		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout},
-	)
+	log.Info("received shutdown signal", slog.String("signal", sig.String()))
 
-	httpSrv := &http.Server{
-		Addr:         ":" + strconv.Itoa(cfg.HTTPServer.Port),
-		Handler:      srv.Handler(),
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: cfg.HTTPServer.Timeout + 2*time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
 
-	//log.Info("http-server server starting", slog.String("addr", httpSrv.Addr))
-	if err := httpSrv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Error("http-server server error", logger.Err(err))
+	if err := application.Stop(ctx); err != nil {
+		log.Error("graceful shutdown failed", slog.Any("err", err))
 	}
 }
