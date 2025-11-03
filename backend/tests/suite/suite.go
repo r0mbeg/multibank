@@ -29,7 +29,7 @@ type Suite struct {
 	Cfg     *config.Config
 	JWT     *jwt.Manager
 	User    *usersvc.Service
-	Auth    *auth.Service
+	Auth    *auth.Auth
 	Server  *httptest.Server
 	BaseURL string
 	Client  *http.Client
