@@ -1,26 +1,70 @@
-import {create} from "zustand/react";
-import {persist} from "zustand/middleware";
+import { create } from "zustand/react";
+import {devtools, persist} from "zustand/middleware";
 
 interface User {
-    userName: string;
-    id: number;
+    firstName: string;
+    lastName: string;
+    patronic: string;
+    email: string;
 }
 
 interface AuthState {
     token: string | null;
+    expiresAt: number | null; // Дата истечения в миллисекундах (Date.now() + expires_in * 1000)
     user: User | null;
-    login: () => void;
+    isAuthenticated: boolean;
+    setUser: (user: Me) => void;
+    login: (token: string, expiresIn: number, user?: User) => void; // expiresIn в секундах
     logout: () => void;
+    checkTokenValidity: () => boolean; // Проверяет, не истёк ли токен
 }
 
-export const useAuthStore = create<AuthState>()(
+interface Me {
+    birthdate: string
+    created_at: string
+    email: string
+    first_name: string
+    id: number
+    last_name: string
+    patronymic: string
+    updated_at: string
+}
+
+export const useAuthStore = create<AuthState>()(devtools(
     persist(
-        (set) => ({
+        (set, get) => ({
             token: null,
+            expiresAt: null,
             user: null,
-            login: () => set({token: '12345678', user: {id: 1, userName: 'UserOne'}}),
-            logout: () => set({token: null, user: null}),
+            isAuthenticated: false,
+            setUser: (data) => set({
+                user: {
+                    firstName: data.first_name,
+                    lastName: data.last_name,
+                    patronic: data.patronymic,
+                    email: data.email,
+                }
+            }),
+            login: (token: string, expiresIn: number, user?: User) => {
+                const expiresAt = Date.now() + expiresIn * 1000; // Преобразуем в timestamp
+                set({
+                    token,
+                    expiresAt,
+                    user: user || null,
+                    isAuthenticated: true,
+                });
+            },
+            logout: () => set({
+                token: null,
+                expiresAt: null,
+                user: null,
+                isAuthenticated: false,
+            }),
+            checkTokenValidity: () => {
+                const { expiresAt } = get();
+                return expiresAt ? Date.now() < expiresAt : false;
+            },
         }),
-        { name: 'auth-storage'}
-    )
-)
+        { name: 'auth-storage' } // Сохраняется в localStorage
+    ))
+);

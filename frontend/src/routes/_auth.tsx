@@ -5,8 +5,8 @@ import Sidebar from "../components/Sidebar.tsx";
 
 export const Route = createFileRoute('/_auth')({
     beforeLoad: ({location}) => {
-        const { user } = useAuthStore.getState();
-        if (user === null) {
+        const { isAuthenticated } = useAuthStore.getState();
+        if (!isAuthenticated) {
             throw redirect({
                 to: '/login',
                 search: {redirect: location.pathname}

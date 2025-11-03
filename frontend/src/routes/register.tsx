@@ -1,25 +1,25 @@
 import {createFileRoute, createLink} from '@tanstack/react-router'
 import {Controller, type SubmitErrorHandler, type SubmitHandler, useForm} from "react-hook-form";
 import {
+    Alert,
     Button,
     FormControl,
     IconButton,
     InputAdornment,
     InputLabel,
     Link as MUILink,
-    OutlinedInput,
+    OutlinedInput, Snackbar,
 } from "@mui/material";
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import {Visibility, VisibilityOff, WarningAmber} from "@mui/icons-material";
 import React, {useState} from "react";
 import ErrorText from "../components/ErrorText.tsx";
 import type { RegisterForm} from "../types/types.ts";
-import {useMutation, useQuery} from "@tanstack/react-query";
-import {Api} from "../api/api.ts";
 import dayjs, { Dayjs } from 'dayjs';
 import {LocalizationProvider} from "@mui/x-date-pickers";
 import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
 import {ruRU} from "@mui/x-date-pickers/locales";
+import {useRegistration} from "../hooks/useRegistration.ts";
 
 export const Route = createFileRoute('/register')({
   component: RouteComponent,
@@ -28,6 +28,8 @@ export const Route = createFileRoute('/register')({
 const CustomLink = createLink(MUILink);
 
 function RouteComponent() {
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // Состояние для открытия Snackbar
+    const [snackbarMessage, setSnackbarMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const {
         control,
@@ -36,27 +38,19 @@ function RouteComponent() {
         formState: { errors },
     } = useForm<RegisterForm>()
 
-    const registrationMutation = useMutation({
-        mutationFn: async (registerData: RegisterForm) => {
-            const response = await Api.registration(registerData);
-            return response.data;
-        },
-        onSuccess: (data) => {
-            console.log('Registration successful:', data);
-        },
-        onError: (error) => {
-            console.error('Registration failed:', error);
-        },
-        retry: false,
-    });
+    const {mutate: registration, isPending} = useRegistration(setSnackbarMessage, setSnackbarOpen);
+
     const onSubmit: SubmitHandler<RegisterForm> = (registerData) => {
-        console.log(registerData);
-        registrationMutation.mutate(registerData);
+        registration(registerData);
     }
 
     const onError: SubmitErrorHandler<RegisterForm> = (errors) => {
         console.log(errors)
     }
+
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false); // Закрываем Snackbar
+    };
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -226,9 +220,9 @@ function RouteComponent() {
                                             {
                                                 showPassword
                                                     ?
-                                                    <VisibilityOff color={!!error ? 'error' : 'inherit'} />
+                                                    <VisibilityOff color={error ? 'error' : 'inherit'} />
                                                     :
-                                                    <Visibility color={!!error ? 'error' : 'inherit'} />
+                                                    <Visibility color={error ? 'error' : 'inherit'} />
                                             }
                                         </IconButton>
                                     </InputAdornment>
@@ -238,12 +232,23 @@ function RouteComponent() {
                     )}
                 />
 
-                {/*{(errors.login || errors.password) && <ErrorText><WarningAmber /> Заполните все поля</ErrorText>}*/}
+                {errors && <ErrorText><WarningAmber /> Ошибка</ErrorText>}
 
-                <Button variant="contained" type={'submit'}>Зарегистрироваться</Button>
+                <Button variant="contained" type={'submit'} disabled={isPending}>Зарегистрироваться</Button>
 
                 <p style={{textAlign: 'center'}}>Есть аккаунт? <CustomLink to={'/login'} underline={'hover'} search={{redirect: undefined}}>Войти</CustomLink></p>
             </form>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </div>
     );
 }

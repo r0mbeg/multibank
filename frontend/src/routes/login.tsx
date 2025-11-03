@@ -1,6 +1,5 @@
-import {createFileRoute, createLink, useNavigate, useSearch} from "@tanstack/react-router";
+import {createFileRoute, createLink} from "@tanstack/react-router";
 import {Controller, type SubmitErrorHandler, type SubmitHandler, useForm} from "react-hook-form";
-import {useAuthStore} from "../stores/authStore.ts";
 import React, {useState} from "react";
 import {
     Button,
@@ -9,26 +8,23 @@ import {
     InputAdornment,
     InputLabel,
     OutlinedInput,
-    Link as MUILink,
+    Link as MUILink, Alert, Snackbar,
 } from "@mui/material";
 import {VisibilityOff, Visibility, WarningAmber} from "@mui/icons-material";
 import ErrorText from "../components/ErrorText.tsx";
 import type {LoginForm} from "../types/types.ts";
+import {useLogin} from "../hooks/useLogin.ts";
 
 export const Route = createFileRoute('/login')({
-    component: LoginPage,
-    validateSearch: (search: Record<string, unknown>) => ({
-        redirect: (typeof search.redirect === 'string' ? search.redirect : undefined) as string | undefined,
-    })
+    component: LoginPage
 })
 
 const CustomLink = createLink(MUILink);
 
 function LoginPage() {
+    const [snackbarOpen, setSnackbarOpen] = useState(false); // Состояние для открытия Snackbar
+    const [snackbarMessage, setSnackbarMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const navigate = useNavigate();
-    const { login } = useAuthStore();
-    const { redirect } = useSearch({ from: '/login' });
     const {
         control,
         register,
@@ -36,15 +32,19 @@ function LoginPage() {
         formState: { errors },
     } = useForm<LoginForm>()
 
+    const {mutate: login, isPending} = useLogin(setSnackbarMessage, setSnackbarOpen);
+
     const onSubmit: SubmitHandler<LoginForm> = (data) => {
-        login();
-        navigate({to: redirect || '/'})
-        console.log(data)
+        login(data)
     }
 
     const onError: SubmitErrorHandler<LoginForm> = (errors) => {
         console.log(errors)
     }
+
+    const handleSnackbarClose = () => {
+        setSnackbarOpen(false); // Закрываем Snackbar
+    };
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
 
@@ -61,7 +61,7 @@ function LoginPage() {
             <h1 className={'text-6xl mb-8'}>Multibank APP</h1>
             <form className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'} onSubmit={handleSubmit(onSubmit, onError)}>
                 <Controller
-                    name='login'
+                    name='email'
                     control={control}
                     defaultValue={''}
                     render={({ field, fieldState: { error } }) => (
@@ -75,7 +75,7 @@ function LoginPage() {
                                 id={"outlined-adornment-login"}
                                 {...field}
                                 label={'логин'}
-                                {...register("login", { required: true })}
+                                {...register("email", { required: true })}
                             />
                         </FormControl>
                     )}
@@ -112,9 +112,9 @@ function LoginPage() {
                                             {
                                                 showPassword
                                                     ?
-                                                <VisibilityOff color={!!error ? 'error' : 'inherit'} />
+                                                <VisibilityOff color={error ? 'error' : 'inherit'} />
                                                     :
-                                                <Visibility color={!!error ? 'error' : 'inherit'} />
+                                                <Visibility color={error ? 'error' : 'inherit'} />
                                             }
                                         </IconButton>
                                     </InputAdornment>
@@ -124,12 +124,23 @@ function LoginPage() {
                     )}
                 />
 
-                {(errors.login || errors.password) && <ErrorText><WarningAmber /> Заполните все поля</ErrorText>}
+                {(errors.email || errors.password) && <ErrorText><WarningAmber /> Заполните все поля</ErrorText>}
 
-                <Button variant="contained" type={'submit'}>Войти</Button>
+                <Button variant="contained" type={'submit'} disabled={isPending}>Войти</Button>
 
                 <CustomLink to={'/register'} underline={'hover'} sx={{textAlign: 'center'}}>Зарегистрироваться</CustomLink>
             </form>
+
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleSnackbarClose}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+            >
+                <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+                    {snackbarMessage}
+                </Alert>
+            </Snackbar>
         </div>
     );
 }

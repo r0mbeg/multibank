@@ -10,42 +10,42 @@ export const Route = createFileRoute('/_auth/consents')({
   component: RouteComponent,
 })
 
-// const consents = [
-    // {
-    //     bankName: 'abank',
-    //     consentStatus: 'active',
-    // },
-    // {
-    //     bankName: 'bbank',
-    //     consentStatus: 'pending',
-    // },
-    // {
-    //     bankName: 'cbank',
-    //     consentStatus: null,
-    // }
-// ]
+const consents = [
+    {
+        bankName: 'abank',
+        consentStatus: 'active',
+    },
+    {
+        bankName: 'bbank',
+        consentStatus: 'pending',
+    },
+    {
+        bankName: 'cbank',
+        consentStatus: null,
+    }
+]
 
 function RouteComponent() {
     const [snackbarOpen, setSnackbarOpen] = useState(false); // Состояние для открытия Snackbar
     const [snackbarMessage, setSnackbarMessage] = useState('');
 
-    const { data: consents, isLoading, error } = useQuery<Consents[]>({
-        queryKey: ['consents'],
-        queryFn: async (): Promise<Consents[]> => {
-            const response = await Api.getConsents();
-            return response.data;
-        },
-        retry: false,
-    })
+    // const { data: consents, isLoading, error } = useQuery<Consents[]>({
+    //     queryKey: ['consents'],
+    //     queryFn: async (): Promise<Consents[]> => {
+    //         const response = await Api.getConsents();
+    //         return response.data;
+    //     },
+    //     retry: false,
+    // })
 
-
-    useEffect(() => {
-        if (error) {
-            console.log(error)
-            setSnackbarMessage(error.message || 'Произошла ошибка'); // Устанавливаем сообщение
-            setSnackbarOpen(true);
-        }
-    }, [error])
+    //
+    // useEffect(() => {
+    //     if (error) {
+    //         console.log(error)
+    //         setSnackbarMessage(error.message || 'Произошла ошибка'); // Устанавливаем сообщение
+    //         setSnackbarOpen(true);
+    //     }
+    // }, [error])
 
 
     const handleSnackbarClose = () => {
@@ -55,11 +55,11 @@ function RouteComponent() {
   return (
       <>
           <PageTitle>Согласия</PageTitle>
-          {isLoading ?
-              (
-                  <Skeleton/>
-              ) : consents && consents.length > 0 ? (
-                  consents.map((item, idx) => (
+          {/*{isLoading ?*/}
+          {/*    (*/}
+          {/*        <Skeleton/>*/}
+          {/*    ) : consents && consents.length > 0 ? (*/}
+          {consents.map((item, idx) => (
                       <div key={idx} className={'flex justify-between border mb-4 shadow-md rounded-md p-4'}>
                           <p className={'text-xl'}>{item.bankName}</p>
 
@@ -82,11 +82,10 @@ function RouteComponent() {
                               </>
                           )}
                       </div>
-                  ))
-              ) : (
-                  <p>Нет согласий</p>
-              )
-          }
+                  ))}
+              {/*) : (*/}
+              {/*    <p>Нет согласий</p>*/}
+              {/*)*/}
 
           <Snackbar
               open={snackbarOpen}
