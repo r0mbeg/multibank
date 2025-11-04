@@ -27,6 +27,7 @@ type Deps struct {
 	Logger      *slog.Logger
 	UserService handlers.User
 	AuthService handlers.Auth
+	BankService handlers.Bank
 	JWT         *jwt.Manager
 }
 
@@ -78,6 +79,12 @@ func New(deps Deps, opts Options) *Server {
 	r.Route("/me", func(rr chi.Router) {
 		rr.Use(authmw.Auth(deps.JWT))
 		handlers.RegisterMeRoutes(rr, deps.UserService)
+	})
+
+	// Protected routes /banks
+	r.Route("/banks", func(rr chi.Router) {
+		rr.Use(authmw.Auth(deps.JWT))
+		handlers.RegisterBankRoutes(rr, deps.BankService)
 	})
 
 	// swagger ui

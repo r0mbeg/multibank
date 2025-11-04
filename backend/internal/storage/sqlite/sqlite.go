@@ -70,6 +70,7 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 	}
 
 	// zero migration (idempotent IF NOT EXISTS)
+	// users
 	if _, err = tx.ExecContext(ctx, `
 CREATE TABLE IF NOT EXISTS users (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,6 +83,37 @@ CREATE TABLE IF NOT EXISTS users (
     is_admin BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+`); err != nil {
+		return err
+	}
+
+	// banks
+	if _, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS banks(
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    name         TEXT    NOT NULL,
+    code         TEXT    NOT NULL UNIQUE,
+    api_base_url TEXT    NOT NULL,
+    login        TEXT    NOT NULL,  -- client_id
+    password     TEXT    NOT NULL,  -- client_secret
+    is_enabled   INTEGER NOT NULL DEFAULT 1,
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+`); err != nil {
+		return err
+	}
+
+	// bank tokens
+	if _, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS bank_tokens(
+    bank_id      INTEGER NOT NULL UNIQUE,
+    access_token TEXT    NOT NULL,
+    expires_at   TEXT    NOT NULL, -- RFC3339 или datetime('...')
+    created_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at   TEXT    NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY(bank_id) REFERENCES banks(id) ON DELETE CASCADE
 );
 `); err != nil {
 		return err
