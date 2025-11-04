@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS users (
     patronymic    TEXT    NOT NULL,
     birthdate     TEXT    NOT NULL CHECK (length(birthdate) = 10), -- YYYY-MM-DD
     password_hash TEXT    NOT NULL,
+    is_admin BOOLEAN NOT NULL DEFAULT FALSE,
     created_at    TEXT    NOT NULL DEFAULT (datetime('now')),
     updated_at    TEXT    NOT NULL DEFAULT (datetime('now'))
 );

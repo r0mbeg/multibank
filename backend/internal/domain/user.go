@@ -10,6 +10,7 @@ type User struct {
 	Patronymic   string    `db:"patronymic"    json:"patronymic"`
 	BirthDate    string    `db:"birthdate"     json:"birthdate"` // YYYY-MM-DD
 	PasswordHash string    `db:"password_hash" json:"-"`         // не отдаём наружу
+	IsAdmin      bool      `db:"is_admin"      json:"is_admin"`
 	CreatedAt    time.Time `db:"created_at"    json:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"    json:"updated_at"`
 }
@@ -22,5 +23,6 @@ func NewUser(email, first, last, patr, birthDate, passHash string) User {
 		Patronymic:   patr,
 		BirthDate:    birthDate, // ожидаем "YYYY-MM-DD"
 		PasswordHash: passHash,  // уже захешированный
+		IsAdmin:      false,
 	}
 }
