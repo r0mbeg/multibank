@@ -1,4 +1,5 @@
 // tests/testutils/utils.go
+
 package testutils
 
 import (
@@ -34,7 +35,7 @@ func PostWithBody(t *testing.T, s *suite.Suite, path string, body any) *Response
 	return &ResponseWrapper{Resp: resp}
 }
 
-// GetWOBody выполняет HTTP GET-запрос без тела и возвращает ResponseWrapper.
+// GetWOBody doest HTTP GET-request without and returns ResponseWrapper.
 func GetWOBody(t *testing.T, s *suite.Suite, path string, headers ...map[string]string) *ResponseWrapper {
 	req, err := http.NewRequest(http.MethodGet, s.BaseURL+path, nil)
 	require.NoError(t, err)
@@ -54,7 +55,7 @@ func GetWOBody(t *testing.T, s *suite.Suite, path string, headers ...map[string]
 	return &ResponseWrapper{Resp: resp}
 }
 
-// GetWithAuth выполняет GET с заголовком Authorization: Bearer <token>
+// GetWithAuth doest GET with the header Authorization: Bearer <token>
 func GetWithAuth(t *testing.T, s *suite.Suite, path, token string) *ResponseWrapper {
 	req, err := http.NewRequest(http.MethodGet, s.BaseURL+path, nil)
 	require.NoError(t, err)

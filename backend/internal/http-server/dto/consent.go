@@ -1,3 +1,5 @@
+// internal/http-server/dto/consent.go
+
 package dto
 
 import (

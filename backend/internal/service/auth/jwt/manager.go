@@ -1,3 +1,5 @@
+// internal/service/auth/jwt/manager.go
+
 package jwt
 
 import (

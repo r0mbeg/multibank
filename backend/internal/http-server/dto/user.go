@@ -1,4 +1,5 @@
 // internal/http-server/dto/user.go
+
 package dto
 
 import (

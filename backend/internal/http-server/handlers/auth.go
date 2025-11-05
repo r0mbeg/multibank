@@ -1,4 +1,5 @@
 // internal/http-server/handlers/auth.go
+
 package handlers
 
 import (

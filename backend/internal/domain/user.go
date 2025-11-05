@@ -1,3 +1,5 @@
+// internal/domain/user.go
+
 package domain
 
 import "time"

@@ -1,4 +1,5 @@
 // internal/service/bank/service.go
+
 package bank
 
 import (

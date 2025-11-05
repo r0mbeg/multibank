@@ -1,3 +1,5 @@
+// internal/storage/sqlite/sqlite.go
+
 package sqlite
 
 import (

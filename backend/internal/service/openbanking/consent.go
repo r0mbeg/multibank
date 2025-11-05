@@ -1,3 +1,5 @@
+// // internal/service/openbanking/consent.go
+
 package openbanking
 
 import (

@@ -1,3 +1,5 @@
+// internal/http-server/dto/bank.go
+
 package dto
 
 type BankResponse struct {

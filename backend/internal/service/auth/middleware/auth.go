@@ -1,3 +1,5 @@
+// internal/service/auth/middleware/auth.go
+
 package mw
 
 import (

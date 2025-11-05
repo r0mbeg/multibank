@@ -1,3 +1,5 @@
+// internal/domain/bank.go
+
 package domain
 
 import "time"

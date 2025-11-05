@@ -1,4 +1,5 @@
 // tests/auth_e2e_test.go
+
 package tests
 
 import (

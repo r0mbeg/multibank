@@ -1,3 +1,5 @@
+// internal/http-server/dto/auth.go
+
 package dto
 
 type RegisterRequest struct {

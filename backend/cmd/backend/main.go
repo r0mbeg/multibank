@@ -1,3 +1,5 @@
+// cmd/backend/main.go
+
 // @title           Multibank API
 // @version         1.0
 // @description     API для аутентификации и пользователей.

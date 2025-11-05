@@ -1,3 +1,5 @@
+// internal/domain/consent.go
+
 package domain
 
 import "time"

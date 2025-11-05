@@ -1,3 +1,5 @@
+// internal/storage/errors.go
+
 package storage
 
 import (

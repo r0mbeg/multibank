@@ -1,4 +1,5 @@
 // internal/shutdown/shutdown.go
+
 package shutdown
 
 import (

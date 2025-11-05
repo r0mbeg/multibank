@@ -1,4 +1,5 @@
 // internal/storage/sqlite/bank.go
+
 package sqlite
 
 import (

@@ -1,3 +1,5 @@
+// internal/http-server/middleware/logger/logger.go
+
 package logger
 
 import (
