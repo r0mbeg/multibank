@@ -7,7 +7,7 @@ import (
 	"multibank/backend/internal/domain"
 )
 
-type User struct {
+type UserResponse struct {
 	ID         int64     `json:"id"`
 	Email      string    `json:"email"`
 	FirstName  string    `json:"first_name"`
@@ -19,8 +19,8 @@ type User struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 }
 
-func UserFromDomain(d domain.User) User {
-	return User{
+func UserResponseFromDomain(d domain.User) UserResponse {
+	return UserResponse{
 		ID:         d.ID,
 		Email:      d.Email,
 		FirstName:  d.FirstName,
