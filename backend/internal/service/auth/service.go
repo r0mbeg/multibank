@@ -1,3 +1,4 @@
+// internal/service/auth/service.go
 package auth
 
 import (
@@ -8,7 +9,7 @@ import (
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/logger"
 	authjwt "multibank/backend/internal/service/auth/jwt"
-	"multibank/backend/internal/service/user"
+	usrsvc "multibank/backend/internal/service/user"
 	"strings"
 
 	"golang.org/x/crypto/bcrypt"
@@ -76,16 +77,16 @@ func (a *Auth) Register(ctx context.Context, in RegisterInput) (domain.User, err
 	id, err := a.u.Create(ctx, u)
 	if err != nil {
 
-		if errors.Is(err, user.ErrEmailAlreadyUsed) {
+		if errors.Is(err, usrsvc.ErrEmailAlreadyUsed) {
 			log.Error("email already used", logger.Err(err))
-			return domain.User{}, ErrInvalidCredentials
+			return domain.User{}, usrsvc.ErrEmailAlreadyUsed
 		}
 
 		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 	created, err := a.u.GetByID(ctx, id)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
+		if errors.Is(err, usrsvc.ErrUserNotFound) {
 			log.Error("user not found", logger.Err(err))
 			return domain.User{}, ErrInvalidCredentials
 		}
@@ -108,7 +109,7 @@ func (a *Auth) Login(ctx context.Context, email, password string) (string, error
 
 	u, err := a.u.GetByEmail(ctx, email)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
+		if errors.Is(err, usrsvc.ErrUserNotFound) {
 			log.Warn("user not found", logger.Err(err))
 			return "", fmt.Errorf("%s: %w", op, ErrInvalidCredentials)
 		}

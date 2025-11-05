@@ -10,7 +10,7 @@ import (
 	httputils "multibank/backend/internal/http-server/utils"
 	"multibank/backend/internal/service/auth"
 	"multibank/backend/internal/service/auth/jwt"
-	"multibank/backend/internal/service/user"
+	usrsvc "multibank/backend/internal/service/user"
 	"net/http"
 	"time"
 
@@ -93,8 +93,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		switch {
-		case errors.Is(err, user.ErrEmailAlreadyUsed):
-			httputils.WriteError(w, http.StatusConflict, user.ErrEmailAlreadyUsed.Error())
+		case errors.Is(err, usrsvc.ErrEmailAlreadyUsed):
+			httputils.WriteError(w, http.StatusConflict, "email already used")
 		default:
 			httputils.WriteError(w, http.StatusBadRequest, "registration failed")
 		}

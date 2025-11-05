@@ -31,7 +31,7 @@ func RegisterBankRoutes(r chi.Router, svc Bank) {
 // GetBanks godoc
 // @Summary      Get a list of available banks
 // @Description  Retrieves the list of all banks enabled (is_enabled = true) in the system.
-// @Tags         Banks
+// @Tags         banks
 // @Security     BearerAuth
 // @Accept       json
 // @Produce      json
@@ -59,9 +59,7 @@ func (h *BankHandler) GetBanks(w http.ResponseWriter, r *http.Request) {
 			ID: b.ID, Name: b.Name, Code: b.Code, APIBaseURL: b.APIBaseURL, IsEnabled: b.IsEnabled,
 		})
 	}
-	//w.Header().Set("Content-Type", "application/json")
 
 	httputils.WriteJSON(w, http.StatusOK, out)
 
-	//_ = json.NewEncoder(w).Encode(out)
 }

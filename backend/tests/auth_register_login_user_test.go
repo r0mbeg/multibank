@@ -3,7 +3,6 @@ package tests
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 	"time"
@@ -41,8 +40,6 @@ func TestHTTP_Register_Login(t *testing.T) {
 		"password":   pass,
 	})
 
-	fmt.Printf("body in test: %s", bodyReg)
-
 	req, _ := http.NewRequest(http.MethodPost, st.BaseURL+"/auth/register", bytes.NewReader(bodyReg))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := st.Client.Do(req)
@@ -56,6 +53,12 @@ func TestHTTP_Register_Login(t *testing.T) {
 	}
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&regResp))
 	require.NotEmpty(t, regResp.AccessToken)
+
+	// 409 error
+	resp, err = st.Client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
 
 	// login
 	bodyLogin, _ := json.Marshal(map[string]any{
