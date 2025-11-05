@@ -4,6 +4,12 @@ package domain
 
 import "time"
 
+type FullConsent struct {
+	Consent
+	UserID int64
+	BankID int64
+}
+
 type Consent struct {
 	ID                   string
 	Status               ConsentStatus

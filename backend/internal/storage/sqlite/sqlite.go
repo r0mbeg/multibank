@@ -121,5 +121,20 @@ CREATE TABLE IF NOT EXISTS bank_tokens(
 		return err
 	}
 
+	// consents
+	if _, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS bank_tokens(
+id         INTEGER  NOT NULL,
+bank_id    INTEGER  NOT NULL,
+created_at TEXT     NOT NULL,
+expiration_date_time TEXT NOT NULL,
+status     TEXT     NOT NULL
+FOREIGN KEY (bank_id) REFERENCES banks(id) ON DELETE CASCADE,
+FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+`); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
