@@ -2,6 +2,7 @@
 package tests
 
 import (
+	"multibank/backend/internal/http-server/dto"
 	"net/http"
 	"strings"
 	"testing"
@@ -99,15 +100,7 @@ func TestHTTP_AuthFlow(t *testing.T) {
 			GetWithAuth(t, st, "/banks", token).
 			ExpectStatus(t, http.StatusOK).Resp
 
-		// Если хочешь проверить схему — декодируй массив
-		type bankResp struct {
-			ID         int64  `json:"id"`
-			Name       string `json:"name"`
-			Code       string `json:"code"`
-			APIBaseURL string `json:"api_base_url"`
-			IsEnabled  bool   `json:"is_enabled"`
-		}
-		_ = testutils.DecodeJSON[[]bankResp](t, resp) // массив может быть пустым — это ок
+		_ = testutils.DecodeJSON[[]dto.BankResponse](t, resp) // массив может быть пустым — это ок
 	})
 
 }
