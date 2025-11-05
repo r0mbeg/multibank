@@ -101,6 +101,43 @@ const docTemplate = `{
                 }
             }
         },
+        "/banks": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Retrieves the list of all banks enabled (is_enabled = true) in the system.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Banks"
+                ],
+                "summary": "Get a list of available banks",
+                "responses": {
+                    "200": {
+                        "description": "List of banks",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.BankResponse"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/me": {
             "get": {
                 "security": [
@@ -113,7 +150,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "me"
                 ],
                 "summary": "Get current user",
                 "responses": {
@@ -210,6 +247,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "dto.BankResponse": {
+            "type": "object",
+            "properties": {
+                "api_base_url": {
+                    "type": "string"
+                },
+                "code": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "is_enabled": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
@@ -281,6 +338,9 @@ const docTemplate = `{
                 },
                 "id": {
                     "type": "integer"
+                },
+                "is_admin": {
+                    "type": "boolean"
                 },
                 "last_name": {
                     "type": "string"

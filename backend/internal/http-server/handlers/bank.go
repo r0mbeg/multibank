@@ -1,3 +1,4 @@
+// internal/http-server/handlers/bank.go
 package handlers
 
 import (
@@ -5,7 +6,6 @@ import (
 	"encoding/json"
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/http-server/dto"
-	"multibank/backend/internal/service/bank"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -17,16 +17,26 @@ type Bank interface {
 }
 
 type BankHandler struct {
-	svc bank.Service
+	svc Bank
 }
 
 // RegisterBankRoutes registers Bank handlers
 // JWT is attached in server.go to the /banks
-func RegisterBankRoutes(r chi.Router, svc bank.Service) {
+func RegisterBankRoutes(r chi.Router, svc Bank) {
 	h := &BankHandler{svc: svc}
 	r.Get("/", h.GetBanks)
 }
 
+// GetBanks godoc
+// @Summary      Get a list of available banks
+// @Description  Retrieves the list of all banks enabled (is_enabled = true) in the system.
+// @Tags         Banks
+// @Security     BearerAuth
+// @Accept       json
+// @Produce      json
+// @Success      200  {array}  dto.BankResponse  "List of banks"
+// @Failure      500  {object}  dto.ErrorResponse "Internal server error"
+// @Router       /banks [get]
 func (h *BankHandler) GetBanks(w http.ResponseWriter, r *http.Request) {
 	banks, err := h.svc.ListEnabled(r.Context())
 	if err != nil {

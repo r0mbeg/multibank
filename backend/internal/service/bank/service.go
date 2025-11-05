@@ -10,9 +10,12 @@ import (
 	"time"
 
 	"multibank/backend/internal/domain"
+
+	"log/slog"
 )
 
 type Service struct {
+	log        *slog.Logger
 	repo       Repository
 	httpClient *http.Client
 	expirySkew time.Duration // time reserve, so as not to hit the expiration end-to-end
@@ -26,8 +29,9 @@ type Repository interface {
 	GetBankToken(ctx context.Context, bankID int64) (domain.BankToken, error)
 }
 
-func New(repository Repository) *Service {
+func New(log *slog.Logger, repository Repository) *Service {
 	return &Service{
+		log:        log,
 		repo:       repository,
 		httpClient: &http.Client{Timeout: 10 * time.Second},
 		expirySkew: 2 * time.Minute,

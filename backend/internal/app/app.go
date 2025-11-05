@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/service/bank"
 	"net/http"
 	"strconv"
 	"time"
@@ -44,6 +45,9 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	userRepo := sqlite.NewUserRepo(st.DB())
 	userSvc := user.New(log, userRepo)
 
+	bankRepo := sqlite.NewBankRepo(st.DB())
+	bankSvc := bank.New(log, bankRepo)
+
 	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
 	authSvc := auth.New(log, userSvc, jwtMgr)
 
@@ -53,6 +57,7 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 			Logger:      log,
 			UserService: userSvc, // implements handlers.User
 			AuthService: authSvc, // implements handlers.Auth
+			BankService: bankSvc, // implements handlers.Bank
 			JWT:         jwtMgr,
 		},
 		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout},

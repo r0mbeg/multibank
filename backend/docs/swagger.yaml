@@ -1,5 +1,18 @@
 basePath: /
 definitions:
+  dto.BankResponse:
+    properties:
+      api_base_url:
+        type: string
+      code:
+        type: string
+      id:
+        type: integer
+      is_enabled:
+        type: boolean
+      name:
+        type: string
+    type: object
   dto.ErrorResponse:
     properties:
       error:
@@ -47,6 +60,8 @@ definitions:
         type: string
       id:
         type: integer
+      is_admin:
+        type: boolean
       last_name:
         type: string
       patronymic:
@@ -116,6 +131,30 @@ paths:
       summary: Register user
       tags:
       - auth
+  /banks:
+    get:
+      consumes:
+      - application/json
+      description: Retrieves the list of all banks enabled (is_enabled = true) in
+        the system.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of banks
+          schema:
+            items:
+              $ref: '#/definitions/dto.BankResponse'
+            type: array
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get a list of available banks
+      tags:
+      - Banks
   /me:
     get:
       description: Возвращает профиль текущего аутентифицированного пользователя
@@ -138,7 +177,7 @@ paths:
       - BearerAuth: []
       summary: Get current user
       tags:
-      - users
+      - me
   /users/{id}:
     get:
       description: Access is restricted by the token owner (the ID must match)
