@@ -53,5 +53,5 @@ func (h *MeHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httputils.WriteJSON(w, http.StatusOK, dto.UserFromDomain(u))
+	httputils.WriteJSON(w, http.StatusOK, dto.UserResponseFromDomain(u))
 }
