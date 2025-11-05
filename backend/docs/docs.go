@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/auth/login": {
             "post": {
-                "description": "Returns access_token using e-mail and password.",
+                "description": "Returns access_token using e-mail and password.\n\n**Request example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"email\": \"user@example.com\",\n\"password\": \"P@ssw0rd123\"\n}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Response example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"access_token\": \"eyJhbGciOi...\",\n\"expires_in\": 3600\n}\n` + "`" + `` + "`" + `` + "`" + `",
                 "consumes": [
                     "application/json"
                 ],
@@ -63,7 +63,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
-                "description": "User registration. Returns access_token (can be used instantly).",
+                "description": "User registration. Returns access_token (usable immediately).\n\n**Request example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"email\": \"user@example.com\",\n\"first_name\": \"Ivan\",\n\"last_name\": \"Petrov\",\n\"patronymic\": \"Ivanovich\",\n\"birthdate\": \"1990-01-15\",\n\"password\": \"P@ssw0rd123\"\n}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Response example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"access_token\": \"eyJhbGciOi...\",\n\"expires_in\": 3600\n}\n` + "`" + `` + "`" + `` + "`" + `",
                 "consumes": [
                     "application/json"
                 ],
@@ -94,6 +94,12 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "email already used",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -157,7 +163,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.User"
+                            "$ref": "#/definitions/dto.UserResponse"
                         }
                     },
                     "401": {
@@ -203,7 +209,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/dto.User"
+                            "$ref": "#/definitions/dto.UserResponse"
                         }
                     },
                     "400": {
@@ -271,7 +277,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "error": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "invalid credentials"
                 }
             }
         },
@@ -279,10 +286,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "P@ssw0rd123"
                 }
             }
         },
@@ -291,22 +300,28 @@ const docTemplate = `{
             "properties": {
                 "birthdate": {
                     "description": "YYYY-MM-DD",
-                    "type": "string"
+                    "type": "string",
+                    "example": "1990-01-15"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@example.com"
                 },
                 "first_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivan"
                 },
                 "last_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Petrov"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "P@ssw0rd123"
                 },
                 "patronymic": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Ivanovich"
                 }
             }
         },
@@ -314,14 +329,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "access_token": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
                 },
                 "expires_in": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3600
                 }
             }
         },
-        "dto.User": {
+        "dto.UserResponse": {
             "type": "object",
             "properties": {
                 "birthdate": {

@@ -35,17 +35,20 @@ func RegisterUserRoutes(r chi.Router, svc User) {
 
 // GetByID godoc
 // @Summary      Get user by ID
-// @Description  Access is restricted by the token owner (the ID must match)
+// @Description  Доступ ограничён владельцем токена (запрещён доступ к чужим профилям).
 // @Tags         users
-// @Security     BearerAuth
 // @Produce      json
-// @Param        id   path      int  true  "User ID"
-// @Success      200  {object}  dto.User
-// @Failure      400  {object}  map[string]string
-// @Failure      401  {object}  map[string]string
-// @Failure      403  {object}  map[string]string
-// @Failure      404  {object}  map[string]string
+// @Param        Authorization header string true "Bearer {token}" default(Bearer eyJhbGciOi...)
+// @Security     BearerAuth
+// @Param        id   path      int64 true "User ID"
+// @Success      200  {object}  dto.UserResponse
+// @Failure      400  {object}  dto.ErrorResponse
+// @Failure      401  {object}  dto.ErrorResponse
+// @Failure      403  {object}  dto.ErrorResponse
+// @Failure      404  {object}  dto.ErrorResponse
+// @Failure      500  {object}  dto.ErrorResponse
 // @Router       /users/{id} [get]
+
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

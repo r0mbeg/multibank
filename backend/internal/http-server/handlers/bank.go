@@ -3,9 +3,10 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/http-server/dto"
+	httputils "multibank/backend/internal/http-server/utils"
+	authmw "multibank/backend/internal/service/auth/middleware"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -35,12 +36,21 @@ func RegisterBankRoutes(r chi.Router, svc Bank) {
 // @Accept       json
 // @Produce      json
 // @Success      200  {array}  dto.BankResponse  "List of banks"
+// @Failure      403  {object}  dto.ErrorResponse "Access denied"
 // @Failure      500  {object}  dto.ErrorResponse "Internal server error"
 // @Router       /banks [get]
 func (h *BankHandler) GetBanks(w http.ResponseWriter, r *http.Request) {
+
+	_, ok := authmw.UserIDFromContext(r.Context())
+
+	if !ok {
+		httputils.WriteError(w, http.StatusForbidden, "access denied")
+		return
+	}
+
 	banks, err := h.svc.ListEnabled(r.Context())
 	if err != nil {
-		http.Error(w, "internal", http.StatusInternalServerError)
+		httputils.WriteError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 	out := make([]dto.BankResponse, 0, len(banks))
@@ -49,6 +59,9 @@ func (h *BankHandler) GetBanks(w http.ResponseWriter, r *http.Request) {
 			ID: b.ID, Name: b.Name, Code: b.Code, APIBaseURL: b.APIBaseURL, IsEnabled: b.IsEnabled,
 		})
 	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(out)
+	//w.Header().Set("Content-Type", "application/json")
+
+	httputils.WriteJSON(w, http.StatusOK, out)
+
+	//_ = json.NewEncoder(w).Encode(out)
 }

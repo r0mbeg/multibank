@@ -101,6 +101,7 @@ func (s *Service) GetByEmail(ctx context.Context, email string) (domain.User, er
 			log.Warn("user not found", logger.Err(err))
 			return domain.User{}, fmt.Errorf("%s: %w", op, ErrUserNotFound)
 		}
+		log.Error("failed to get user", logger.Err(err))
 		return domain.User{}, fmt.Errorf("%s: %w", op, err)
 	}
 

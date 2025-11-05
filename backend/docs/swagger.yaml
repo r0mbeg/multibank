@@ -16,39 +16,50 @@ definitions:
   dto.ErrorResponse:
     properties:
       error:
+        example: invalid credentials
         type: string
     type: object
   dto.LoginRequest:
     properties:
       email:
+        example: user@example.com
         type: string
       password:
+        example: P@ssw0rd123
         type: string
     type: object
   dto.RegisterRequest:
     properties:
       birthdate:
         description: YYYY-MM-DD
+        example: "1990-01-15"
         type: string
       email:
+        example: user@example.com
         type: string
       first_name:
+        example: Ivan
         type: string
       last_name:
+        example: Petrov
         type: string
       password:
+        example: P@ssw0rd123
         type: string
       patronymic:
+        example: Ivanovich
         type: string
     type: object
   dto.TokenResponse:
     properties:
       access_token:
+        example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
         type: string
       expires_in:
+        example: 3600
         type: integer
     type: object
-  dto.User:
+  dto.UserResponse:
     properties:
       birthdate:
         type: string
@@ -79,7 +90,24 @@ paths:
     post:
       consumes:
       - application/json
-      description: Returns access_token using e-mail and password.
+      description: |-
+        Returns access_token using e-mail and password.
+
+        **Request example**
+        ```json
+        {
+        "email": "user@example.com",
+        "password": "P@ssw0rd123"
+        }
+        ```
+
+        **Response example**
+        ```json
+        {
+        "access_token": "eyJhbGciOi...",
+        "expires_in": 3600
+        }
+        ```
       parameters:
       - description: Login payload
         in: body
@@ -109,7 +137,28 @@ paths:
     post:
       consumes:
       - application/json
-      description: User registration. Returns access_token (can be used instantly).
+      description: |-
+        User registration. Returns access_token (usable immediately).
+
+        **Request example**
+        ```json
+        {
+        "email": "user@example.com",
+        "first_name": "Ivan",
+        "last_name": "Petrov",
+        "patronymic": "Ivanovich",
+        "birthdate": "1990-01-15",
+        "password": "P@ssw0rd123"
+        }
+        ```
+
+        **Response example**
+        ```json
+        {
+        "access_token": "eyJhbGciOi...",
+        "expires_in": 3600
+        }
+        ```
       parameters:
       - description: Register payload
         in: body
@@ -126,6 +175,10 @@ paths:
             $ref: '#/definitions/dto.TokenResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "409":
+          description: email already used
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       summary: Register user
@@ -164,7 +217,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.User'
+            $ref: '#/definitions/dto.UserResponse'
         "401":
           description: Unauthorized
           schema:
@@ -193,7 +246,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/dto.User'
+            $ref: '#/definitions/dto.UserResponse'
         "400":
           description: Bad Request
           schema:

@@ -1,9 +1,14 @@
+// internal/storage/sqlite/bank.go
 package sqlite
 
 import (
 	"context"
 	"database/sql"
+	"errors"
+	"fmt"
 	"multibank/backend/internal/domain"
+	"multibank/backend/internal/storage"
+	sqliteutils "multibank/backend/internal/storage/sqlite/utils"
 	"time"
 )
 
@@ -15,32 +20,43 @@ func NewBankRepo(db *sql.DB) *BankRepo {
 	return &BankRepo{db: db}
 }
 
-func boolToInt(b bool) int {
-	if b {
-		return 1
-	}
-	return 0
-}
-
 func (s *BankRepo) ListEnabledBanks(ctx context.Context) ([]domain.Bank, error) {
+	const op = "storage.sqlite.bank.ListEnabledBanks"
+
 	rows, err := s.db.QueryContext(ctx, `
 		SELECT id, name, code, api_base_url, login, password, is_enabled, created_at, updated_at
 		FROM banks
 		WHERE is_enabled = 1
 		ORDER BY name`)
 	if err != nil {
-		return nil, err
+		return []domain.Bank{}, fmt.Errorf("%s : %w", op, err)
 	}
 	defer rows.Close()
 
 	var out []domain.Bank
 	for rows.Next() {
 		var b domain.Bank
+		var created, updated string
 		var en int
-		if err := rows.Scan(&b.ID, &b.Name, &b.Code, &b.APIBaseURL, &b.Login, &b.Password, &en, &b.CreatedAt, &b.UpdatedAt); err != nil {
-			return nil, err
+		err := rows.Scan(&b.ID, &b.Name, &b.Code, &b.APIBaseURL, &b.Login, &b.Password, &en, &created, &updated)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return []domain.Bank{}, fmt.Errorf("%s : %w", op, storage.ErrBanksNotFound)
+			}
+
+			return []domain.Bank{}, fmt.Errorf("%s : %w", op, err)
 		}
+
 		b.IsEnabled = en == 1
+
+		if t, err := sqliteutils.ParseTS(created); err != nil {
+			b.CreatedAt = t
+		}
+
+		if t, err := sqliteutils.ParseTS(updated); err != nil {
+			b.UpdatedAt = t
+		}
+
 		out = append(out, b)
 	}
 	return out, rows.Err()

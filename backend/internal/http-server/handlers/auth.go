@@ -47,13 +47,34 @@ func RegisterAuthRoutes(r chi.Router, a Auth, j *jwt.Manager) {
 
 // Register godoc
 // @Summary      Register user
-// @Description  User registration. Returns access_token (can be used instantly).
+// @Description  User registration. Returns access_token (usable immediately).
+// @Description
+// @Description  **Request example**
+// @Description  ```json
+// @Description  {
+// @Description    "email": "user@example.com",
+// @Description    "first_name": "Ivan",
+// @Description    "last_name": "Petrov",
+// @Description    "patronymic": "Ivanovich",
+// @Description    "birthdate": "1990-01-15",
+// @Description    "password": "P@ssw0rd123"
+// @Description  }
+// @Description  ```
+// @Description
+// @Description  **Response example**
+// @Description  ```json
+// @Description  {
+// @Description    "access_token": "eyJhbGciOi...",
+// @Description    "expires_in": 3600
+// @Description  }
+// @Description  ```
 // @Tags         auth
 // @Accept       json
 // @Produce      json
 // @Param        request body     dto.RegisterRequest true "Register payload"
 // @Success      201     {object} dto.TokenResponse
 // @Failure      400     {object} dto.ErrorResponse
+// @Failure      409     {object} dto.ErrorResponse "email already used"
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	var req dto.RegisterRequest
@@ -95,6 +116,22 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // Login godoc
 // @Summary      Login
 // @Description  Returns access_token using e-mail and password.
+// @Description
+// @Description  **Request example**
+// @Description  ```json
+// @Description  {
+// @Description    "email": "user@example.com",
+// @Description    "password": "P@ssw0rd123"
+// @Description  }
+// @Description  ```
+// @Description
+// @Description  **Response example**
+// @Description  ```json
+// @Description  {
+// @Description    "access_token": "eyJhbGciOi...",
+// @Description    "expires_in": 3600
+// @Description  }
+// @Description  ```
 // @Tags         auth
 // @Accept       json
 // @Produce      json

@@ -1,3 +1,4 @@
+// internal/storage/sqlite/user.go
 package sqlite
 
 import (
@@ -7,7 +8,7 @@ import (
 	"fmt"
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/storage"
-	"time"
+	sqliteutils "multibank/backend/internal/storage/sqlite/utils"
 
 	"modernc.org/sqlite"               // type of Error
 	sqlitelib "modernc.org/sqlite/lib" // code constants
@@ -18,19 +19,6 @@ type UserRepo struct {
 }
 
 func NewUserRepo(db *sql.DB) *UserRepo { return &UserRepo{db: db} }
-
-const tsLayout = "2006-01-02 15:04:05"
-const tsLayoutNs = "2006-01-02 15:04:05.99999"
-
-// helpers for date parsing
-func parseTS(s string) (time.Time, error) {
-	t, err := time.Parse(tsLayout, s)
-	if err == nil {
-		return t, nil
-	}
-	return time.Parse(tsLayoutNs, s)
-}
-func nowUTC() string { return time.Now().UTC().Format(tsLayout) }
 
 func (r *UserRepo) Create(ctx context.Context, u domain.User) (int64, error) {
 	const op = "storage.sqlite.user.Create"
@@ -77,10 +65,10 @@ FROM users WHERE id = ?`, id).Scan(
 		return domain.User{}, fmt.Errorf("%s : %w", op, err)
 	}
 
-	if t, err := parseTS(created); err == nil {
+	if t, err := sqliteutils.ParseTS(created); err == nil {
 		u.CreatedAt = t
 	}
-	if t, err := parseTS(updated); err == nil {
+	if t, err := sqliteutils.ParseTS(updated); err == nil {
 		u.UpdatedAt = t
 	}
 	return u, nil
@@ -104,10 +92,10 @@ FROM users WHERE email = ?`, email).Scan(
 
 		return domain.User{}, fmt.Errorf("%s : %w", op, err)
 	}
-	if t, err := parseTS(created); err == nil {
+	if t, err := sqliteutils.ParseTS(created); err == nil {
 		u.CreatedAt = t
 	}
-	if t, err := parseTS(updated); err == nil {
+	if t, err := sqliteutils.ParseTS(updated); err == nil {
 		u.UpdatedAt = t
 	}
 	return u, nil

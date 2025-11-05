@@ -28,12 +28,15 @@ func RegisterMeRoutes(r chi.Router, svc User) {
 // @Summary      Get current user
 // @Description  Возвращает профиль текущего аутентифицированного пользователя
 // @Tags         me
-// @Security     BearerAuth
 // @Produce      json
-// @Success      200  {object}  dto.User
-// @Failure      401  {object}  dto.ErrorResponse
-// @Failure      404  {object}  dto.ErrorResponse
+// @Param        Authorization header string true "Bearer {token}" default(Bearer eyJhbGciOi...)
+// @Security     BearerAuth
+// @Success      200  {object} dto.UserResponse
+// @Failure      403  {object} dto.ErrorResponse
+// @Failure      404  {object} dto.ErrorResponse
+// @Failure      500  {object} dto.ErrorResponse
 // @Router       /me [get]
+
 func (h *MeHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := authmw.UserIDFromContext(r.Context())

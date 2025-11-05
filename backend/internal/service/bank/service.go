@@ -3,8 +3,11 @@ package bank
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"multibank/backend/internal/logger"
+	"multibank/backend/internal/storage"
 	"net/http"
 	"net/url"
 	"time"
@@ -28,6 +31,10 @@ type Repository interface {
 	UpsertBankToken(ctx context.Context, t domain.BankToken) error
 	GetBankToken(ctx context.Context, bankID int64) (domain.BankToken, error)
 }
+
+var (
+	ErrBanksNotFound = errors.New("banks not found")
+)
 
 func New(log *slog.Logger, repository Repository) *Service {
 	return &Service{
@@ -107,5 +114,27 @@ func (s *Service) GetOrRefreshToken(ctx context.Context, bankID int64) (string, 
 }
 
 func (s *Service) ListEnabled(ctx context.Context) ([]domain.Bank, error) {
-	return s.repo.ListEnabledBanks(ctx)
+	const op = "service.bank.ListEnabled"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	log.Info("getting enabled banks")
+
+	banks, err := s.repo.ListEnabledBanks(ctx)
+	if err != nil {
+
+		if errors.Is(err, storage.ErrBanksNotFound) {
+			log.Warn("banks not found", logger.Err(err))
+			return []domain.Bank{}, fmt.Errorf("%s: %w", op, ErrBanksNotFound)
+		}
+
+		log.Error("failed to get enabled banks", logger.Err(err))
+		return []domain.Bank{}, fmt.Errorf("%s: %w", op, err)
+	}
+
+	log.Info("successfully got enabled banks")
+
+	return banks, nil
 }
