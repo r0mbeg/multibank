@@ -4,7 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"multibank/backend/internal/logger"
-	"multibank/backend/internal/service/auth"
+	authsvc "multibank/backend/internal/service/auth"
 	"multibank/backend/internal/service/auth/jwt"
 	"net/http"
 	"net/http/httptest"
@@ -17,23 +17,25 @@ import (
 	httpserver "multibank/backend/internal/http-server"
 
 	"multibank/backend/internal/config"
+	banksvc "multibank/backend/internal/service/bank"
 	usersvc "multibank/backend/internal/service/user"
 	"multibank/backend/internal/storage/sqlite"
 )
 
 type Suite struct {
 	*testing.T
-	Ctx     context.Context
-	Cancel  context.CancelFunc
-	Log     *slog.Logger
-	Cfg     *config.Config
-	JWT     *jwt.Manager
-	User    *usersvc.Service
-	Auth    *auth.Auth
-	Server  *httptest.Server
-	BaseURL string
-	Client  *http.Client
-	Storage *sqlite.Storage
+	Ctx         context.Context
+	Cancel      context.CancelFunc
+	Log         *slog.Logger
+	Cfg         *config.Config
+	JWTManager  *jwt.Manager
+	UserService *usersvc.Service
+	BankService *banksvc.Service
+	AuthService *authsvc.Auth
+	Server      *httptest.Server
+	BaseURL     string
+	Client      *http.Client
+	Storage     *sqlite.Storage
 }
 
 func New(t *testing.T) *Suite {
@@ -76,16 +78,21 @@ func New(t *testing.T) *Suite {
 		slog.String("db", cfg.StoragePath),
 	)
 
-	repo := sqlite.NewUserRepo(st.DB())
-	user := usersvc.New(log, repo)
-	j := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
-	a := auth.New(log, user, j)
+	usrRepo := sqlite.NewUserRepo(st.DB())
+	userSvc := usersvc.New(log, usrRepo)
+
+	bankRepo := sqlite.NewBankRepo(st.DB())
+	bankSvc := banksvc.New(log, bankRepo)
+
+	jwtMng := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
+	authSvc := authsvc.New(log, userSvc, jwtMng)
 
 	srv := httpserver.New(httpserver.Deps{
 		Logger:      log,
-		UserService: user,
-		AuthService: a,
-		JWT:         j,
+		UserService: userSvc,
+		BankService: bankSvc,
+		AuthService: authSvc,
+		JWT:         jwtMng,
 	}, httpserver.Options{
 		RequestTimeout: cfg.HTTPServer.Timeout,
 	})
@@ -93,18 +100,18 @@ func New(t *testing.T) *Suite {
 	t.Cleanup(ts.Close)
 
 	return &Suite{
-		T:       t,
-		Ctx:     ctx,
-		Cancel:  cancel,
-		Log:     log,
-		Cfg:     cfg,
-		JWT:     j,
-		User:    user,
-		Auth:    a,
-		Server:  ts,
-		BaseURL: ts.URL,
-		Client:  ts.Client(),
-		Storage: st,
+		T:           t,
+		Ctx:         ctx,
+		Cancel:      cancel,
+		Log:         log,
+		Cfg:         cfg,
+		JWTManager:  jwtMng,
+		UserService: userSvc,
+		AuthService: authSvc,
+		Server:      ts,
+		BaseURL:     ts.URL,
+		Client:      ts.Client(),
+		Storage:     st,
 	}
 }
 
