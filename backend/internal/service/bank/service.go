@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	httputils "multibank/backend/internal/http-server/utils"
 	"multibank/backend/internal/logger"
 	"multibank/backend/internal/storage"
 	"net/http"
@@ -56,7 +57,17 @@ type bankTokenResp struct {
 }
 
 func (s *Service) GetOrRefreshToken(ctx context.Context, bankID int64) (string, time.Time, error) {
-	// 1) если в кэше есть ещё валидный — используем
+
+	const op = "service.bank.GetOrRefreshToken"
+
+	log := s.log.With(
+		slog.String("op", op),
+		slog.Int64("bank_id", bankID),
+	)
+
+	log.Info("fetching bank token")
+
+	// 1) if there is still a valid token in the DB, we use it
 	if cached, err := s.repo.GetBankToken(ctx, bankID); err == nil {
 		if time.Now().Add(s.expirySkew).Before(cached.ExpiresAt) {
 			return cached.AccessToken, cached.ExpiresAt, nil
@@ -66,38 +77,53 @@ func (s *Service) GetOrRefreshToken(ctx context.Context, bankID int64) (string, 
 	// 2) тянем банк и запрашиваем новый токен
 	b, err := s.repo.GetBankByID(ctx, bankID)
 	if err != nil {
+		log.Warn("failed to get bank details", logger.Err(err))
 		return "", time.Time{}, err
 	}
-	u, err := url.Parse(b.APIBaseURL)
+	base, err := httputils.NormalizeURL(b.APIBaseURL)
 	if err != nil {
+		log.Warn("invalid bank api_base_url", slog.String("api_base_url", b.APIBaseURL), logger.Err(err))
 		return "", time.Time{}, err
 	}
-	u.Path = "/auth/bank-token"
 
-	q := u.Query()
+	// /auth/bank-token + query ?client_id=...&client_secret=...
+	tokenURL := base.ResolveReference(&url.URL{Path: "/auth/bank-token"})
+	q := tokenURL.Query()
 	q.Set("client_id", b.Login)
 	q.Set("client_secret", b.Password)
-	u.RawQuery = q.Encode()
+	tokenURL.RawQuery = q.Encode()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u.String(), nil)
+	// log w/o secret
+	masked := *tokenURL
+	mq := masked.Query()
+	mq.Set("client_secret", "******")
+	masked.RawQuery = mq.Encode()
+	log.Info("requesting bank token", slog.String("url", masked.String()))
+
+	// POST w/o body
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, tokenURL.String(), http.NoBody)
 	if err != nil {
+		log.Warn("unable to create http request", logger.Err(err))
 		return "", time.Time{}, err
 	}
 	req.Header.Set("Accept", "application/json")
 
 	resp, err := s.httpClient.Do(req)
 	if err != nil {
+		log.Warn("unable send req for a bank token", logger.Err(err))
 		return "", time.Time{}, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		body, _ := io.ReadAll(resp.Body)
+		log.Warn("token endpoint returned non-200", slog.String("status", resp.Status))
 		return "", time.Time{}, fmt.Errorf("bank-token %d: %s", resp.StatusCode, string(body))
 	}
 
 	var tr bankTokenResp
 	if err := json.NewDecoder(resp.Body).Decode(&tr); err != nil {
+		log.Warn("failed to decode bank token response", logger.Err(err))
 		return "", time.Time{}, err
 	}
 	if tr.AccessToken == "" || tr.ExpiresIn <= 0 {
@@ -112,9 +138,13 @@ func (s *Service) GetOrRefreshToken(ctx context.Context, bankID int64) (string, 
 	}); err != nil {
 		return "", time.Time{}, err
 	}
+
+	log.Info("bank token successfully refreshed")
+
 	return tr.AccessToken, expiresAt, nil
 }
 
+// ListEnabled return a list of all banks where IsEnabled == true
 func (s *Service) ListEnabled(ctx context.Context) ([]domain.Bank, error) {
 	const op = "service.bank.ListEnabled"
 
@@ -139,4 +169,45 @@ func (s *Service) ListEnabled(ctx context.Context) ([]domain.Bank, error) {
 	log.Info("successfully got enabled banks")
 
 	return banks, nil
+}
+
+// TokenStatus returns true/false and expiration time, without giving the token itself.
+func (s *Service) TokenStatus(ctx context.Context, bankID int64) (bool, time.Time, error) {
+	t, err := s.repo.GetBankToken(ctx, bankID)
+	if err != nil || t.AccessToken == "" {
+		return false, time.Time{}, nil
+	}
+	// Считаем валидным, если до экспирации остаётся хотя бы expirySkew.
+	if time.Now().Add(s.expirySkew).Before(t.ExpiresAt) {
+		return true, t.ExpiresAt, nil
+	}
+	return false, t.ExpiresAt, nil
+}
+
+// EnsureTokensForEnabled goes through all the enabled banks and gets valid token for each
+func (s *Service) EnsureTokensForEnabled(ctx context.Context) error {
+
+	const op = "service.EnsureTokensForEnabled"
+
+	log := s.log.With(
+		slog.String("op", op),
+	)
+
+	banks, err := s.repo.ListEnabledBanks(ctx)
+	if err != nil {
+		return err
+	}
+	for _, b := range banks {
+		// try to get of update
+		if _, _, err := s.GetOrRefreshToken(ctx, b.ID); err != nil {
+			// log warn, but not crash the app
+			log.Warn("failed to get/refresh bank token",
+				slog.Int64("bank_id", b.ID),
+				slog.String("code", b.Code),
+				slog.String("name", b.Name),
+				logger.Err(err),
+			)
+		}
+	}
+	return nil
 }

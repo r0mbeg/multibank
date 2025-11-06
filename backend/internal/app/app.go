@@ -61,7 +61,11 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 			BankService: bankSvc, // implements handlers.Bank
 			JWT:         jwtMgr,
 		},
-		httpserver.Options{RequestTimeout: cfg.HTTPServer.Timeout},
+		httpserver.Options{
+			RequestTimeout:     cfg.HTTPServer.Timeout,
+			BankEnsureOnStart:  true,             // check tokens on start
+			BankEnsureInterval: 10 * time.Minute, // check tokens every ... minutes (e.g.)
+		},
 	)
 
 	httpSrv := &http.Server{

@@ -50,11 +50,11 @@ func (s *BankRepo) ListEnabledBanks(ctx context.Context) ([]domain.Bank, error) 
 
 		b.IsEnabled = en == 1
 
-		if t, err := sqliteutils.ParseTS(created); err != nil {
+		if t, err := sqliteutils.ParseTS(created); err == nil {
 			b.CreatedAt = t
 		}
 
-		if t, err := sqliteutils.ParseTS(updated); err != nil {
+		if t, err := sqliteutils.ParseTS(updated); err == nil {
 			b.UpdatedAt = t
 		}
 
@@ -67,24 +67,38 @@ func (s *BankRepo) GetBankByID(ctx context.Context, id int64) (domain.Bank, erro
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, name, code, api_base_url, login, password, is_enabled, created_at, updated_at
 		FROM banks WHERE id = ?`, id)
+
 	var b domain.Bank
 	var en int
-	if err := row.Scan(&b.ID, &b.Name, &b.Code, &b.APIBaseURL, &b.Login, &b.Password, &en, &b.CreatedAt, &b.UpdatedAt); err != nil {
+	var created, updated string
+
+	if err := row.Scan(&b.ID, &b.Name, &b.Code, &b.APIBaseURL, &b.Login, &b.Password, &en, &created, &updated); err != nil {
 		return domain.Bank{}, err
 	}
 	b.IsEnabled = en == 1
+
+	if t, err := sqliteutils.ParseTS(created); err == nil {
+		b.CreatedAt = t
+	}
+	if t, err := sqliteutils.ParseTS(updated); err == nil {
+		b.UpdatedAt = t
+	}
 	return b, nil
 }
 
 func (s *BankRepo) UpsertBankToken(ctx context.Context, t domain.BankToken) error {
 	_, err := s.db.ExecContext(ctx, `
-		INSERT INTO bank_tokens(bank_id, access_token, expires_at)
-		VALUES(?,?,?)
+		INSERT INTO bank_tokens(bank_id, access_token, expires_at, updated_at)
+		VALUES(?,?,?,?)
 		ON CONFLICT(bank_id) DO UPDATE SET
 		  access_token = excluded.access_token,
 		  expires_at   = excluded.expires_at,
-		  updated_at   = datetime('now')`,
-		t.BankID, t.AccessToken, t.ExpiresAt.UTC().Format(time.RFC3339))
+		  updated_at   = excluded.updated_at`,
+		t.BankID,
+		t.AccessToken,
+		t.ExpiresAt.UTC().Format(sqliteutils.TsLayout),
+		time.Now().UTC().Format(sqliteutils.TsLayout),
+	)
 	return err
 }
 
@@ -92,9 +106,21 @@ func (s *BankRepo) GetBankToken(ctx context.Context, bankID int64) (domain.BankT
 	row := s.db.QueryRowContext(ctx, `
 		SELECT bank_id, access_token, expires_at, created_at, updated_at
 		FROM bank_tokens WHERE bank_id = ?`, bankID)
+
 	var t domain.BankToken
-	if err := row.Scan(&t.BankID, &t.AccessToken, &t.ExpiresAt, &t.CreatedAt, &t.UpdatedAt); err != nil {
+	var expires, created, updated string
+
+	if err := row.Scan(&t.BankID, &t.AccessToken, &expires, &created, &updated); err != nil {
 		return domain.BankToken{}, err
+	}
+	if v, err := sqliteutils.ParseTS(expires); err == nil {
+		t.ExpiresAt = v
+	}
+	if v, err := sqliteutils.ParseTS(created); err == nil {
+		t.CreatedAt = v
+	}
+	if v, err := sqliteutils.ParseTS(updated); err == nil {
+		t.UpdatedAt = v
 	}
 	return t, nil
 }

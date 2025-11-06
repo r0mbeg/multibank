@@ -3,6 +3,7 @@
 package httpserver
 
 import (
+	"context"
 	"multibank/backend/internal/service/auth/jwt"
 	authmw "multibank/backend/internal/service/auth/middleware"
 	stdhttp "net/http"
@@ -32,7 +33,9 @@ type Deps struct {
 }
 
 type Options struct {
-	RequestTimeout time.Duration
+	RequestTimeout     time.Duration
+	BankEnsureOnStart  bool          // getting tokens on startup
+	BankEnsureInterval time.Duration // periodic ensure, 0 = disable
 }
 
 func New(deps Deps, opts Options) *Server {
@@ -89,6 +92,29 @@ func New(deps Deps, opts Options) *Server {
 
 	// swagger ui
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
+
+	if opts.BankEnsureOnStart {
+		go func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+			defer cancel()
+			if err := deps.BankService.EnsureTokensForEnabled(ctx); err != nil {
+				deps.Logger.Warn("ensure tokens on start failed", slog.Any("err", err))
+			}
+		}()
+	}
+
+	if opts.BankEnsureInterval > 0 {
+		go func() {
+			t := time.NewTicker(opts.BankEnsureInterval)
+			defer t.Stop()
+			for range t.C {
+				// no timeout (~but can be small)
+				if err := deps.BankService.EnsureTokensForEnabled(context.Background()); err != nil {
+					deps.Logger.Warn("scheduled token ensure failed", slog.Any("err", err))
+				}
+			}
+		}()
+	}
 
 	return &Server{mux: r}
 }
