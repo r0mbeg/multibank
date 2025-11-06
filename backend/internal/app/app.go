@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"multibank/backend/internal/logger"
 	"multibank/backend/internal/service/bank"
+	"multibank/backend/internal/service/product"
 	"net/http"
 	"strconv"
 	"time"
@@ -20,6 +21,8 @@ import (
 	"multibank/backend/internal/storage/sqlite"
 
 	"multibank/backend/internal/service/auth/jwt"
+
+	"multibank/backend/internal/service/openbanking"
 )
 
 type App struct {
@@ -49,17 +52,23 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	bankRepo := sqlite.NewBankRepo(st.DB())
 	bankSvc := bank.New(log, bankRepo)
 
+	productsClient := &openbanking.ProductsClient{
+		HTTP: &http.Client{Timeout: 10 * time.Second},
+	}
+	prodSvc := product.New(log, bankRepo, bankSvc, productsClient)
+
 	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
 	authSvc := auth.New(log, userSvc, jwtMgr)
 
 	// --- chi mux via httpserver.New ---
 	srv := httpserver.New(
 		httpserver.Deps{
-			Logger:      log,
-			UserService: userSvc, // implements handlers.User
-			AuthService: authSvc, // implements handlers.Auth
-			BankService: bankSvc, // implements handlers.Bank
-			JWT:         jwtMgr,
+			Logger:         log,
+			UserService:    userSvc, // implements handlers.User
+			AuthService:    authSvc, // implements handlers.Auth
+			BankService:    bankSvc, // implements handlers.Bank
+			ProductService: prodSvc, // implements handlers.Product
+			JWT:            jwtMgr,
 		},
 		httpserver.Options{
 			RequestTimeout:     cfg.HTTPServer.Timeout,

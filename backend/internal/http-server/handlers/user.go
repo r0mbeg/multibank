@@ -49,7 +49,6 @@ func RegisterUserRoutes(r chi.Router, svc User) {
 // @Failure      404  {object}  dto.ErrorResponse
 // @Failure      500  {object}  dto.ErrorResponse
 // @Router       /users/{id} [get]
-
 func (h *UserHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	idStr := chi.URLParam(r, "id")
 	id, err := strconv.ParseInt(idStr, 10, 64)

@@ -1,9 +1,32 @@
 basePath: /
 definitions:
+  domain.ProductType:
+    enum:
+    - deposit
+    - loan
+    - card
+    - account
+    type: string
+    x-enum-varnames:
+    - ProductDeposit
+    - ProductLoan
+    - ProductCard
+    - ProductAccount
+  dto.BankAuthorizeResponse:
+    properties:
+      status:
+        example: authorized
+        type: string
+      token_expires:
+        type: string
+    type: object
   dto.BankResponse:
     properties:
       api_base_url:
         type: string
+      authorized:
+        description: from domain.BankToken
+        type: boolean
       code:
         type: string
       id:
@@ -11,6 +34,9 @@ definitions:
       is_enabled:
         type: boolean
       name:
+        type: string
+      token_expires:
+        description: from domain.BankToken
         type: string
     type: object
   dto.ErrorResponse:
@@ -27,6 +53,33 @@ definitions:
       password:
         example: P@ssw0rd123
         type: string
+    type: object
+  dto.ProductResponse:
+    properties:
+      bank_code:
+        type: string
+      bank_id:
+        type: integer
+      bank_name:
+        type: string
+      description:
+        type: string
+      fetched_at:
+        type: string
+      interestRate:
+        type: number
+      maxAmount:
+        type: number
+      minAmount:
+        type: number
+      productId:
+        type: string
+      productName:
+        type: string
+      productType:
+        $ref: '#/definitions/domain.ProductType'
+      termMonths:
+        type: integer
     type: object
   dto.RegisterRequest:
     properties:
@@ -188,8 +241,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Retrieves the list of all banks enabled (is_enabled = true) in
-        the system.
+      description: Retrieves all enabled banks and shows whether backend is authorized
+        for each (token cached) and token expiry.
       produces:
       - application/json
       responses:
@@ -199,6 +252,10 @@ paths:
             items:
               $ref: '#/definitions/dto.BankResponse'
             type: array
+        "403":
+          description: Access denied
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
         "500":
           description: Internal server error
           schema:
@@ -207,10 +264,53 @@ paths:
       - BearerAuth: []
       summary: Get a list of available banks
       tags:
-      - Banks
+      - banks
+  /banks/{id}/authorize:
+    post:
+      consumes:
+      - application/json
+      description: Requests or refreshes access token for the bank and stores it in
+        cache/DB.
+      parameters:
+      - description: Bank ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.BankAuthorizeResponse'
+        "400":
+          description: Invalid id
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "403":
+          description: Access denied
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "502":
+          description: Bank auth failed
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Authorize backend in a specific bank
+      tags:
+      - banks
   /me:
     get:
       description: Возвращает профиль текущего аутентифицированного пользователя
+      parameters:
+      - default: Bearer eyJhbGciOi...
+        description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -218,12 +318,16 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/dto.UserResponse'
-        "401":
-          description: Unauthorized
+        "403":
+          description: Forbidden
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
           schema:
             $ref: '#/definitions/dto.ErrorResponse'
       security:
@@ -231,10 +335,56 @@ paths:
       summary: Get current user
       tags:
       - me
+  /products:
+    get:
+      consumes:
+      - application/json
+      description: Returns a merged list of products from all enabled banks with optional
+        filters.
+      parameters:
+      - description: 'Type: deposit|loan|card|account'
+        in: query
+        name: product_type
+        type: string
+      - collectionFormat: csv
+        description: Repeatable bank id filter
+        in: query
+        items:
+          type: integer
+        name: bank_id
+        type: array
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ProductResponse'
+            type: array
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get aggregated products
+      tags:
+      - products
   /users/{id}:
     get:
-      description: Access is restricted by the token owner (the ID must match)
+      description: Доступ ограничён владельцем токена (запрещён доступ к чужим профилям).
       parameters:
+      - default: Bearer eyJhbGciOi...
+        description: Bearer {token}
+        in: header
+        name: Authorization
+        required: true
+        type: string
       - description: User ID
         in: path
         name: id
@@ -250,27 +400,23 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by ID

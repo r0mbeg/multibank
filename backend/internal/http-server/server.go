@@ -25,11 +25,12 @@ type Server struct {
 }
 
 type Deps struct {
-	Logger      *slog.Logger
-	UserService handlers.User
-	AuthService handlers.Auth
-	BankService handlers.Bank
-	JWT         *jwt.Manager
+	Logger         *slog.Logger
+	UserService    handlers.User
+	AuthService    handlers.Auth
+	BankService    handlers.Bank
+	ProductService handlers.Product
+	JWT            *jwt.Manager
 }
 
 type Options struct {
@@ -88,6 +89,12 @@ func New(deps Deps, opts Options) *Server {
 	r.Route("/banks", func(rr chi.Router) {
 		rr.Use(authmw.Auth(deps.JWT))
 		handlers.RegisterBankRoutes(rr, deps.BankService)
+	})
+
+	// Protected routes /products
+	r.Route("/products", func(rr chi.Router) {
+		rr.Use(authmw.Auth(deps.JWT))
+		handlers.RegisterProductRoutes(rr, deps.ProductService)
 	})
 
 	// swagger ui

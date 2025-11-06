@@ -114,7 +114,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Retrieves the list of all banks enabled (is_enabled = true) in the system.",
+                "description": "Retrieves all enabled banks and shows whether backend is authorized for each (token cached) and token expiry.",
                 "consumes": [
                     "application/json"
                 ],
@@ -122,7 +122,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Banks"
+                    "banks"
                 ],
                 "summary": "Get a list of available banks",
                 "responses": {
@@ -135,8 +135,69 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/banks/{id}/authorize": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Requests or refreshes access token for the bank and stores it in cache/DB.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "banks"
+                ],
+                "summary": "Authorize backend in a specific bank",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Bank ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.BankAuthorizeResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid id",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "Bank auth failed",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -159,6 +220,16 @@ const docTemplate = `{
                     "me"
                 ],
                 "summary": "Get current user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer eyJhbGciOi...",
+                        "description": "Bearer {token}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -166,14 +237,81 @@ const docTemplate = `{
                             "$ref": "#/definitions/dto.UserResponse"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized",
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns a merged list of products from all enabled banks with optional filters.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get aggregated products",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Type: deposit|loan|card|account",
+                        "name": "product_type",
+                        "in": "query"
+                    },
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "integer"
+                        },
+                        "collectionFormat": "csv",
+                        "description": "Repeatable bank id filter",
+                        "name": "bank_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.ProductResponse"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -188,7 +326,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Access is restricted by the token owner (the ID must match)",
+                "description": "Доступ ограничён владельцем токена (запрещён доступ к чужим профилям).",
                 "produces": [
                     "application/json"
                 ],
@@ -197,6 +335,14 @@ const docTemplate = `{
                 ],
                 "summary": "Get user by ID",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "default": "Bearer eyJhbGciOi...",
+                        "description": "Bearer {token}",
+                        "name": "Authorization",
+                        "in": "header",
+                        "required": true
+                    },
                     {
                         "type": "integer",
                         "description": "User ID",
@@ -215,37 +361,31 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
                         }
                     }
                 }
@@ -253,11 +393,42 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.ProductType": {
+            "type": "string",
+            "enum": [
+                "deposit",
+                "loan",
+                "card",
+                "account"
+            ],
+            "x-enum-varnames": [
+                "ProductDeposit",
+                "ProductLoan",
+                "ProductCard",
+                "ProductAccount"
+            ]
+        },
+        "dto.BankAuthorizeResponse": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string",
+                    "example": "authorized"
+                },
+                "token_expires": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.BankResponse": {
             "type": "object",
             "properties": {
                 "api_base_url": {
                     "type": "string"
+                },
+                "authorized": {
+                    "description": "from domain.BankToken",
+                    "type": "boolean"
                 },
                 "code": {
                     "type": "string"
@@ -269,6 +440,10 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
+                    "type": "string"
+                },
+                "token_expires": {
+                    "description": "from domain.BankToken",
                     "type": "string"
                 }
             }
@@ -292,6 +467,47 @@ const docTemplate = `{
                 "password": {
                     "type": "string",
                     "example": "P@ssw0rd123"
+                }
+            }
+        },
+        "dto.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "bank_code": {
+                    "type": "string"
+                },
+                "bank_id": {
+                    "type": "integer"
+                },
+                "bank_name": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "fetched_at": {
+                    "type": "string"
+                },
+                "interestRate": {
+                    "type": "number"
+                },
+                "maxAmount": {
+                    "type": "number"
+                },
+                "minAmount": {
+                    "type": "number"
+                },
+                "productId": {
+                    "type": "string"
+                },
+                "productName": {
+                    "type": "string"
+                },
+                "productType": {
+                    "$ref": "#/definitions/domain.ProductType"
+                },
+                "termMonths": {
+                    "type": "integer"
                 }
             }
         },

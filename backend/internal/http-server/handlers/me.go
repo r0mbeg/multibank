@@ -36,7 +36,6 @@ func RegisterMeRoutes(r chi.Router, svc User) {
 // @Failure      404  {object} dto.ErrorResponse
 // @Failure      500  {object} dto.ErrorResponse
 // @Router       /me [get]
-
 func (h *MeHandler) GetMe(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := authmw.UserIDFromContext(r.Context())
