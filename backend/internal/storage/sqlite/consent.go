@@ -11,25 +11,24 @@ type ConsentRepo struct {
 	db *sql.DB
 }
 
-
 func NewConsentRepo(db *sql.DB) *ConsentRepo {
 	return &ConsentRepo{db: db}
 }
 
-func (s *ConsentRepo) GetConsentByID(ctx context.Context, id int64) (domain.FullConsent, error) {
+func (s *ConsentRepo) GetConsentByID(ctx context.Context, id int64) (domain.FullAccountConsent, error) {
 
 	row := s.db.QueryRowContext(ctx, `
 		SELECT consent_id, user_id, bank_id, created_at, expiration_date_time, status
 		FROM consents WHERE if = ?
 		`, id)
-	var c domain.FullConsent
+	var c domain.FullAccountConsent
 	if err := row.Scan(&c.ID, &c.UserID, &c.BankID, &c.CreationDateTime, &c.ExpirationDateTime, &c.Status); err != nil {
-		return domain.FullConsent{}, err
+		return domain.FullAccountConsent{}, err
 	}
 	return c, nil
 }
 
-func (s *ConsentRepo) UpsertConsent(ctx context.Context, c domain.FullConsent) error {
+func (s *ConsentRepo) UpsertConsent(ctx context.Context, c domain.FullAccountConsent) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO consents(consent_id, user_id, bank_id, created_at, expiration_date_time, status)
 		VALUES(?,?,?,?,?,?)
