@@ -25,7 +25,7 @@ type ConsentOperations interface {
 	GetByID(
 		Bank domain.Bank,
 		ConsentID string,
-	) (*domain.Consent, error)
+	) (*domain.AccountConsent, error)
 
 	DeleteByIDDeleteByID(
 		Bank domain.Bank,
@@ -37,7 +37,7 @@ type ConsentOperations interface {
 		Permissions []domain.Permission,
 		RequestingUser string,
 		AccessToken domain.BankToken,
-	) (*domain.Consent, error)
+	) (*domain.AccountConsent, error)
 }
 
 func CreatePath(Bank domain.Bank, ConsentID string) string {
@@ -48,7 +48,7 @@ func CreatePath(Bank domain.Bank, ConsentID string) string {
 	)
 }
 
-func (s *ConsentService) GetByID(Bank domain.Bank, ConsentID string) (*domain.Consent, error) {
+func (s *ConsentService) GetByID(Bank domain.Bank, ConsentID string) (*domain.AccountConsent, error) {
 	const operation = "service.openbanking.GetByID"
 
 	log := s.log.With(
@@ -78,7 +78,7 @@ func (s *ConsentService) GetByID(Bank domain.Bank, ConsentID string) (*domain.Co
 
 	// TODO какие-то проверки надо
 
-	return &domain.Consent{
+	return &domain.AccountConsent{
 		ID:                   consent.Data.ID,
 		Status:               consent.Data.Status,
 		CreationDateTime:     consent.Data.CreationDateTime,
@@ -124,7 +124,7 @@ func (s *ConsentService) Request(
 	Permissions []domain.Permission,
 	RequestingUser string,
 	AccessToken domain.BankToken,
-) (*domain.Consent, error) {
+) (*domain.AccountConsent, error) {
 	const operation = "service.openbanking.Request"
 
 	log := s.log.With(
@@ -177,7 +177,7 @@ func (s *ConsentService) Request(
 		return nil, err
 	}
 
-	return &domain.Consent{
+	return &domain.AccountConsent{
 		ID:                   consentResponse.ConsentId,
 		Status:               consentResponse.Status,
 		CreationDateTime:     time.Now(),

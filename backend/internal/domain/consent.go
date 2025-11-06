@@ -4,13 +4,13 @@ package domain
 
 import "time"
 
-type FullConsent struct {
-	Consent
+type FullAccountConsent struct {
+	AccountConsent
 	UserID int64
 	BankID int64
 }
 
-type Consent struct {
+type AccountConsent struct {
 	ID                   string
 	Status               ConsentStatus
 	CreationDateTime     time.Time
