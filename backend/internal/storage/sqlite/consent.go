@@ -19,8 +19,21 @@ func (s *ConsentRepo) GetConsentByID(ctx context.Context, id int64) (domain.Full
 
 	row := s.db.QueryRowContext(ctx, `
 		SELECT consent_id, user_id, bank_id, created_at, expiration_date_time, status
-		FROM consents WHERE if = ?
+		FROM consents WHERE consent_id = ?
 		`, id)
+	var c domain.FullAccountConsent
+	if err := row.Scan(&c.ID, &c.UserID, &c.BankID, &c.CreationDateTime, &c.ExpirationDateTime, &c.Status); err != nil {
+		return domain.FullAccountConsent{}, err
+	}
+	return c, nil
+}
+
+func (s *ConsentRepo) GetConsentByUserIdAndBankId(ctx context.Context, user_id int64, bank_id int64) (domain.FullAccountConsent, error) {
+
+	row := s.db.QueryRowContext(ctx, `
+		SELECT consent_id, user_id, bank_id, created_at, expiration_date_time, status
+		FROM consents WHERE user_id = ? AND bank_id = ?
+		`, user_id, bank_id)
 	var c domain.FullAccountConsent
 	if err := row.Scan(&c.ID, &c.UserID, &c.BankID, &c.CreationDateTime, &c.ExpirationDateTime, &c.Status); err != nil {
 		return domain.FullAccountConsent{}, err
