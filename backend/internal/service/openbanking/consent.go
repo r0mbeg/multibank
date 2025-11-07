@@ -1,4 +1,4 @@
-// // internal/service/openbanking/consent.go
+// internal/service/openbanking/consent.go
 
 package openbanking
 
@@ -9,180 +9,160 @@ import (
 	"io"
 	"log/slog"
 	"multibank/backend/internal/domain"
-	"multibank/backend/internal/http-server/dto"
+	httputils "multibank/backend/internal/http-server/utils"
+	"multibank/backend/internal/logger"
 	"net/http"
 	"net/url"
-	"path"
 	"time"
 )
 
-type ConsentService struct {
-	httpClient *http.Client
-	log        *slog.Logger
+type ConsentClient struct {
+	log  *slog.Logger
+	HTTP *http.Client
+
+	// Constants - from app.New(...)
+	RequestingBank     string // "team014"
+	RequestingBankName string // "Team 14 Multibank"
+	Reason             string // "Account aggregation for HackAPI"
 }
 
-type ConsentOperations interface {
-	GetByID(
-		Bank domain.Bank,
-		ConsentID string,
-	) (*domain.AccountConsent, error)
-
-	DeleteByIDDeleteByID(
-		Bank domain.Bank,
-		ConsentID string,
-	) error
-
-	Request(
-		Bank domain.Bank,
-		Permissions []domain.Permission,
-		RequestingUser string,
-		AccessToken domain.BankToken,
-	) (*domain.AccountConsent, error)
+func NewConsentClient(log *slog.Logger, httpClient *http.Client, reqBank, reqBankName, reason string) *ConsentClient {
+	if httpClient == nil {
+		httpClient = http.DefaultClient
+	}
+	return &ConsentClient{
+		HTTP:               httpClient,
+		log:                log,
+		RequestingBank:     reqBank,
+		RequestingBankName: reqBankName,
+		Reason:             reason,
+	}
 }
 
-func CreatePath(Bank domain.Bank, ConsentID string) string {
-	return path.Join(
-		Bank.APIBaseURL,
-		"account-consents",
-		url.PathEscape(ConsentID),
+func isOK(code int) bool { return code >= 200 && code < 300 }
+
+type requestBody struct {
+	ClientID           string              `json:"client_id"`
+	Permissions        []domain.Permission `json:"permissions"`
+	Reason             string              `json:"reason"`
+	RequestingBank     string              `json:"requesting_bank"`
+	RequestingBankName string              `json:"requesting_bank_name"`
+}
+
+type ConsentRequestResp struct {
+	RequestID    string  `json:"request_id"`
+	ConsentID    *string `json:"consent_id"` // can be blank
+	Status       string  `json:"status"`     // "AwaitingAuthorisation" | "Authorised" ...
+	Message      string  `json:"message"`
+	CreatedAt    string  `json:"created_at"`
+	AutoApproved *bool   `json:"auto_approved"`
+}
+
+type ConsentViewWrapper struct {
+	Data struct {
+		ConsentID            string              `json:"consentId"`
+		Status               string              `json:"status"` // "Authorized" | "AwaitingAuthorization" ...
+		CreationDateTime     time.Time           `json:"creationDateTime"`
+		StatusUpdateDateTime time.Time           `json:"statusUpdateDateTime"`
+		Permissions          []domain.Permission `json:"permissions"`
+		ExpirationDateTime   time.Time           `json:"expirationDateTime"`
+	} `json:"data"`
+}
+
+func (c *ConsentClient) RequestConsent(bank domain.Bank, clientID string, perms []domain.Permission, bearer string) (*ConsentRequestResp, error) {
+
+	const op = "service.openbanking.RequestConsent"
+
+	log := c.log.With(
+		slog.String("op", op),
 	)
-}
 
-func (s *ConsentService) GetByID(Bank domain.Bank, ConsentID string) (*domain.AccountConsent, error) {
-	const operation = "service.openbanking.GetByID"
-
-	log := s.log.With(
-		slog.String("op", operation),
-		slog.String("ConsentID", ConsentID),
-	)
-
-	log.Info("Retreiving consent")
-
-	url := CreatePath(Bank, ConsentID)
-
-	resp, err := s.httpClient.Get(url)
+	base, err := httputils.NormalizeURL(bank.APIBaseURL)
 	if err != nil {
+		log.Warn("invalid bank api_base_url", slog.String("api_base_url", bank.APIBaseURL), logger.Err(err))
+		return nil, err
+	}
+
+	u, _ := url.JoinPath(base.String(), "account-consents", "request")
+
+	body := requestBody{
+		ClientID:           clientID,
+		Permissions:        perms,
+		Reason:             c.Reason,
+		RequestingBank:     c.RequestingBank,
+		RequestingBankName: c.RequestingBankName,
+	}
+	b, _ := json.Marshal(body)
+
+	req, _ := http.NewRequest("POST", u, bytes.NewReader(b))
+	req.Header.Set("Authorization", "Bearer "+bearer)
+	req.Header.Set("X-Requesting-Bank", c.RequestingBank)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.HTTP.Do(req)
+	if err != nil {
+		log.Warn("failed to request consent", logger.Err(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if !isOK(resp.StatusCode) {
+		all, _ := io.ReadAll(resp.Body)
 
-	if resp.StatusCode <= 200 && resp.StatusCode > 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("account-consents %d: %s", resp.StatusCode, string(body))
+		log.Warn("got non-ok status code from request",
+			slog.Int("code", resp.StatusCode),
+			slog.String("body", string(all)),
+		)
+
+		return nil, fmt.Errorf("consents request %d: %s", resp.StatusCode, string(all))
 	}
 
-	var consent dto.ConsentViewWrapper
-	if err := json.NewDecoder(resp.Body).Decode(&consent); err != nil {
+	var out ConsentRequestResp
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		log.Warn("failed to decode consent response", logger.Err(err))
 		return nil, err
 	}
-
-	// TODO какие-то проверки надо
-
-	return &domain.AccountConsent{
-		ID:                   consent.Data.ID,
-		Status:               consent.Data.Status,
-		CreationDateTime:     consent.Data.CreationDateTime,
-		StatusUpdateDateTime: consent.Data.StatusUpdateDateTime,
-		Permissions:          consent.Data.Permissions,
-		ExpirationDateTime:   consent.Data.ExpirationDateTime,
-	}, nil
+	return &out, nil
 }
 
-func (s *ConsentService) DeleteByID(Bank domain.Bank, ConsentID string) error {
-	const operation = "service.openbanking.DeleteByID"
+func (c *ConsentClient) GetConsent(bank domain.Bank, requestOrConsentID string, xFapi string) (*ConsentViewWrapper, error) {
 
-	log := s.log.With(
-		slog.String("op", operation),
-		slog.String("ConsentID", ConsentID),
+	const op = "service.openbanking.GetConsent"
+
+	log := c.log.With(
+		slog.String("op", op),
 	)
 
-	log.Info("Deleting consent")
-
-	url := CreatePath(Bank, ConsentID)
-
-	req, err := http.NewRequest("DELETE", url, nil)
+	base, err := httputils.NormalizeURL(bank.APIBaseURL)
 	if err != nil {
-		return err
-	}
-
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode <= 200 && resp.StatusCode > 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("account-consents %d: %s", resp.StatusCode, string(body))
-	}
-
-	return nil
-}
-
-func (s *ConsentService) Request(
-	Bank domain.Bank,
-	Permissions []domain.Permission,
-	RequestingUser string,
-	AccessToken domain.BankToken,
-) (*domain.AccountConsent, error) {
-	const operation = "service.openbanking.Request"
-
-	log := s.log.With(
-		slog.String("op", operation),
-		slog.Any("bank", Bank),
-		slog.Any("permissions", Permissions),
-		slog.String("requestingUser", RequestingUser),
-	)
-
-	log.Info("Creating a new request for consent")
-
-	requestBody := &dto.ConsentRequest{
-		ClientId:           RequestingUser,
-		Permissions:        Permissions,
-		Reason:             "just give me consent pretty please",
-		RequestingBank:     Bank.Code,
-		RequestingBankName: Bank.Name,
-	}
-	requestBodyJson, err := json.Marshal(requestBody)
-	if err != nil {
+		log.Warn("invalid bank api_base_url", slog.String("api_base_url", bank.APIBaseURL), logger.Err(err))
 		return nil, err
 	}
+	u, _ := url.JoinPath(base.String(), "account-consents", requestOrConsentID)
 
-	url := path.Join(
-		Bank.APIBaseURL,
-		"account-consents",
-	)
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(requestBodyJson))
-	if err != nil {
-		return nil, err
+	req, _ := http.NewRequest("GET", u, nil)
+	if xFapi != "" {
+		req.Header.Set("x-fapi-interaction-id", xFapi)
+	} else {
+		c.log.Warn("x-fapi-interaction-id is blank")
 	}
-
-	req.Header.Set("Authorization", "Bearer "+AccessToken.AccessToken)
-	req.Header.Set("X-Requesting-Bank", Bank.Code)
-
-	resp, err := s.httpClient.Do(req)
+	resp, err := c.HTTP.Do(req)
 	if err != nil {
+		log.Warn("failed to get consent", logger.Err(err))
 		return nil, err
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode <= 200 && resp.StatusCode > 300 {
-		body, _ := io.ReadAll(resp.Body)
-		return nil, fmt.Errorf("account-consents %d: %s", resp.StatusCode, string(body))
+	if !isOK(resp.StatusCode) {
+		all, _ := io.ReadAll(resp.Body)
+		log.Warn("got non-ok status code from request",
+			slog.Int("code", resp.StatusCode),
+			slog.String("body", string(all)),
+		)
+		return nil, fmt.Errorf("consents get %d: %s", resp.StatusCode, string(all))
 	}
-
-	var consentResponse dto.ConsentRequestResponse
-	if err := json.NewDecoder(resp.Body).Decode(&consentResponse); err != nil {
+	var v ConsentViewWrapper
+	if err := json.NewDecoder(resp.Body).Decode(&v); err != nil {
+		log.Warn("failed to decode consent response", logger.Err(err))
 		return nil, err
 	}
-
-	return &domain.AccountConsent{
-		ID:                   consentResponse.ConsentId,
-		Status:               consentResponse.Status,
-		CreationDateTime:     time.Now(),
-		Permissions:          Permissions,
-		StatusUpdateDateTime: time.Now(),
-		ExpirationDateTime:   time.Now().Add(time.Duration(5) * time.Minute),
-	}, nil
+	return &v, nil
 }

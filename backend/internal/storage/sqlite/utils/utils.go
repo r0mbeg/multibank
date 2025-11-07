@@ -15,3 +15,22 @@ func ParseTS(s string) (time.Time, error) {
 	}
 	return time.Parse(TsLayoutNs, s)
 }
+
+func ToISO(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.UTC().Format(time.RFC3339Nano)
+	return &s
+}
+
+func FromISO(s *string) *time.Time {
+	if s == nil {
+		return nil
+	}
+	t, err := time.Parse(time.RFC3339Nano, *s)
+	if err != nil {
+		return nil
+	}
+	return &t
+}

@@ -1,5 +1,27 @@
 basePath: /
 definitions:
+  domain.ConsentStatus:
+    enum:
+    - AwaitingAuthorisation
+    - Rejected
+    - Authorised
+    - Revoked
+    type: string
+    x-enum-varnames:
+    - AwaitingAuthorisation
+    - Rejected
+    - Authorised
+    - Revoked
+  domain.Permission:
+    enum:
+    - ReadAccountsDetail
+    - ReadBalances
+    - ReadTransactionsDetail
+    type: string
+    x-enum-varnames:
+    - ReadAccountsDetail
+    - ReadBalances
+    - ReadTransactionsDetail
   domain.ProductType:
     enum:
     - deposit
@@ -39,10 +61,59 @@ definitions:
         description: from domain.BankToken
         type: string
     type: object
+  dto.ConsentCreateRequest:
+    properties:
+      bank_id:
+        description: указываем, с каким банком
+        type: integer
+      client_id:
+        description: с фронта
+        type: string
+      permissions:
+        description: опционально, иначе дефолт
+        items:
+          $ref: '#/definitions/domain.Permission'
+        type: array
+    type: object
+  dto.ConsentResponse:
+    properties:
+      auto_approved:
+        type: boolean
+      bank_creation_datetime:
+        type: string
+      bank_expiration_datetime:
+        type: string
+      bank_status:
+        type: string
+      bank_status_update_datetime:
+        type: string
+      consent_id:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: integer
+      permissions:
+        items:
+          $ref: '#/definitions/domain.Permission'
+        type: array
+      reason:
+        type: string
+      request_id:
+        type: string
+      requesting_bank:
+        type: string
+      requesting_bank_name:
+        type: string
+      status:
+        $ref: '#/definitions/domain.ConsentStatus'
+      updated_at:
+        type: string
+    type: object
   dto.ErrorResponse:
     properties:
       error:
-        example: invalid credentials
+        example: sth went wrong
         type: string
     type: object
   dto.LoginRequest:
@@ -301,6 +372,155 @@ paths:
       summary: Authorize backend in a specific bank
       tags:
       - banks
+  /consents:
+    get:
+      description: Returns the user's consent. It can be filtered by bank.
+      parameters:
+      - description: Filter by bank id
+        in: query
+        name: bank_id
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.ConsentResponse'
+            type: array
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: List my consents
+      tags:
+      - Consents
+  /consents/{id}:
+    delete:
+      parameters:
+      - description: Consent ID (internal)
+        in: path
+        name: id
+        required: true
+        type: integer
+      responses:
+        "204":
+          description: No Content
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete consent
+      tags:
+      - Consents
+    get:
+      parameters:
+      - description: Consent ID (internal)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ConsentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get consent by id
+      tags:
+      - Consents
+  /consents/{id}/refresh:
+    post:
+      description: Asks the bank by request_id/consent_id and updates our status (and
+        consent_id, if available).
+      parameters:
+      - description: Consent ID (internal)
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.ConsentResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Refresh consent status
+      tags:
+      - Consents
+  /consents/request:
+    post:
+      consumes:
+      - application/json
+      description: Creates a request for consent (account-consent) in the bank and
+        saves the draft with us. If the bank auto—confirms, the consent_id will be
+        returned immediately, otherwise the status will be Awaiting Authorization.
+      parameters:
+      - description: Create consent payload
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.ConsentCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.ConsentResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Request account consent
+      tags:
+      - Consents
   /me:
     get:
       description: Возвращает профиль текущего аутентифицированного пользователя

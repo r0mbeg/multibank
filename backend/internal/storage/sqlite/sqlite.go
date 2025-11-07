@@ -157,19 +157,35 @@ CREATE TABLE IF NOT EXISTS bank_tokens(
 	}
 
 	// consents
-	//if _, err = tx.ExecContext(ctx, `
-	//CREATE TABLE IF NOT EXISTS bank_tokens(
-	//id         INTEGER  NOT NULL,
-	//bank_id    INTEGER  NOT NULL,
-	//created_at TEXT     NOT NULL,
-	//expiration_date_time TEXT NOT NULL,
-	//status     TEXT     NOT NULL
-	//FOREIGN KEY (bank_id) REFERENCES banks(id) ON DELETE CASCADE,
-	//FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-	//);
-	//`); err != nil {
-	//		return err
-	//	}
+	if _, err = tx.ExecContext(ctx, `
+	CREATE TABLE IF NOT EXISTS account_consents (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id             INTEGER NOT NULL,
+    bank_id             INTEGER NOT NULL,
+    request_id          TEXT    NOT NULL UNIQUE,
+    consent_id          TEXT,
+    status              TEXT    NOT NULL, -- 'AwaitingAuthorisation' | 'Rejected' | 'Authorised' | 'Revoked'
+    auto_approved       INTEGER,          -- NULL | 0 | 1
+    permissions_json    TEXT    NOT NULL, -- JSON array of strings
+    reason              TEXT    NOT NULL,
+    requesting_bank     TEXT    NOT NULL,
+    requesting_bank_name TEXT   NOT NULL,
+
+    bank_status              TEXT,
+    bank_creation_datetime   TEXT,
+    bank_status_update_datetime TEXT,
+    bank_expiration_datetime TEXT,
+
+    created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+
+    UNIQUE (consent_id),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (bank_id) REFERENCES banks(id)
+);
+	`); err != nil {
+		return err
+	}
 
 	return tx.Commit()
 }

@@ -205,6 +205,239 @@ const docTemplate = `{
                 }
             }
         },
+        "/consents": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the user's consent. It can be filtered by bank.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consents"
+                ],
+                "summary": "List my consents",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by bank id",
+                        "name": "bank_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.ConsentResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consents/request": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Creates a request for consent (account-consent) in the bank and saves the draft with us. If the bank auto—confirms, the consent_id will be returned immediately, otherwise the status will be Awaiting Authorization.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consents"
+                ],
+                "summary": "Request account consent",
+                "parameters": [
+                    {
+                        "description": "Create consent payload",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConsentCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConsentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consents/{id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consents"
+                ],
+                "summary": "Get consent by id",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Consent ID (internal)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConsentResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "tags": [
+                    "Consents"
+                ],
+                "summary": "Delete consent",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Consent ID (internal)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/consents/{id}/refresh": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Asks the bank by request_id/consent_id and updates our status (and consent_id, if available).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consents"
+                ],
+                "summary": "Refresh consent status",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Consent ID (internal)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ConsentResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/me": {
             "get": {
                 "security": [
@@ -393,6 +626,34 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "domain.ConsentStatus": {
+            "type": "string",
+            "enum": [
+                "AwaitingAuthorisation",
+                "Rejected",
+                "Authorised",
+                "Revoked"
+            ],
+            "x-enum-varnames": [
+                "AwaitingAuthorisation",
+                "Rejected",
+                "Authorised",
+                "Revoked"
+            ]
+        },
+        "domain.Permission": {
+            "type": "string",
+            "enum": [
+                "ReadAccountsDetail",
+                "ReadBalances",
+                "ReadTransactionsDetail"
+            ],
+            "x-enum-varnames": [
+                "ReadAccountsDetail",
+                "ReadBalances",
+                "ReadTransactionsDetail"
+            ]
+        },
         "domain.ProductType": {
             "type": "string",
             "enum": [
@@ -448,12 +709,85 @@ const docTemplate = `{
                 }
             }
         },
+        "dto.ConsentCreateRequest": {
+            "type": "object",
+            "properties": {
+                "bank_id": {
+                    "description": "указываем, с каким банком",
+                    "type": "integer"
+                },
+                "client_id": {
+                    "description": "с фронта",
+                    "type": "string"
+                },
+                "permissions": {
+                    "description": "опционально, иначе дефолт",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Permission"
+                    }
+                }
+            }
+        },
+        "dto.ConsentResponse": {
+            "type": "object",
+            "properties": {
+                "auto_approved": {
+                    "type": "boolean"
+                },
+                "bank_creation_datetime": {
+                    "type": "string"
+                },
+                "bank_expiration_datetime": {
+                    "type": "string"
+                },
+                "bank_status": {
+                    "type": "string"
+                },
+                "bank_status_update_datetime": {
+                    "type": "string"
+                },
+                "consent_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/domain.Permission"
+                    }
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "request_id": {
+                    "type": "string"
+                },
+                "requesting_bank": {
+                    "type": "string"
+                },
+                "requesting_bank_name": {
+                    "type": "string"
+                },
+                "status": {
+                    "$ref": "#/definitions/domain.ConsentStatus"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "dto.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
                     "type": "string",
-                    "example": "invalid credentials"
+                    "example": "sth went wrong"
                 }
             }
         },

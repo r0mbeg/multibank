@@ -211,3 +211,8 @@ func (s *Service) EnsureTokensForEnabled(ctx context.Context) error {
 	}
 	return nil
 }
+
+// GetBankDetails returns bank row by id (thin wrapper over repo).
+func (s *Service) GetBankByID(ctx context.Context, id int64) (domain.Bank, error) {
+	return s.repo.GetBankByID(ctx, id)
+}

@@ -20,7 +20,3 @@ type TokenResponse struct {
 	AccessToken string `json:"access_token" example:"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."`
 	ExpiresIn   int64  `json:"expires_in"  example:"3600"`
 }
-
-type ErrorResponse struct {
-	Error string `json:"error" example:"invalid credentials"`
-}

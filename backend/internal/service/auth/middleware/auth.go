@@ -9,17 +9,17 @@ import (
 	"strings"
 )
 
-// ctxKey — типизированный ключ для контекста
+// ctxKey — a typed key for the context
 type ctxKey int
 
 const userIDKey ctxKey = iota
 
-// WithUserID добавляет userID в контекст
+// WithUserID adds userID to context
 func WithUserID(ctx context.Context, id int64) context.Context {
 	return context.WithValue(ctx, userIDKey, id)
 }
 
-// UserIDFromContext извлекает userID из контекста
+// UserIDFromContext gets userID from context
 func UserIDFromContext(ctx context.Context) (int64, bool) {
 	v, ok := ctx.Value(userIDKey).(int64)
 	return v, ok

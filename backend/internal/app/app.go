@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"multibank/backend/internal/domain"
 	"multibank/backend/internal/logger"
 	"multibank/backend/internal/service/bank"
+	"multibank/backend/internal/service/consent"
 	"multibank/backend/internal/service/product"
 	"net/http"
 	"strconv"
@@ -52,8 +54,34 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	bankRepo := sqlite.NewBankRepo(st.DB())
 	bankSvc := bank.New(log, bankRepo)
 
-	productsClient := openbanking.NewProductClient(log, &http.Client{Timeout: 10 * time.Second})
-	prodSvc := product.New(log, bankRepo, bankSvc, productsClient)
+	productClient := openbanking.NewProductClient(log, &http.Client{Timeout: 10 * time.Second})
+	prodSvc := product.New(log, bankRepo, bankSvc, productClient)
+
+	consentRepo := sqlite.NewConsentRepo(st.DB())
+	consentClient := openbanking.NewConsentClient(
+		log,
+		&http.Client{Timeout: 10 * time.Second},
+		"team014",           // X-Requesting-Bank (можно захардкодить)
+		"Team 14 Multibank", // RequestingBankName
+		"Агрегация счетов для HackAPI", // Reason
+	)
+
+	defaultPerms := []domain.Permission{
+		domain.ReadAccountsDetail,
+		domain.ReadBalances,
+		domain.ReadTransactionsDetail,
+	}
+
+	consentSvc := consent.New(
+		log,
+		consentRepo,
+		bankSvc, // для получения bank и access_token
+		consentClient,
+		defaultPerms,
+		"team014",
+		"Team 14 Multibank",
+		"Агрегация счетов для HackAPI",
+	)
 
 	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
 	authSvc := auth.New(log, userSvc, jwtMgr)
@@ -62,10 +90,11 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	srv := httpserver.New(
 		httpserver.Deps{
 			Logger:         log,
-			UserService:    userSvc, // implements handlers.User
-			AuthService:    authSvc, // implements handlers.Auth
-			BankService:    bankSvc, // implements handlers.Bank
-			ProductService: prodSvc, // implements handlers.Product
+			UserService:    userSvc,    // implements handlers.User
+			AuthService:    authSvc,    // implements handlers.Auth
+			BankService:    bankSvc,    // implements handlers.Bank
+			ProductService: prodSvc,    // implements handlers.Product
+			ConsentService: consentSvc, // implements handlers.Consent
 			JWT:            jwtMgr,
 		},
 		httpserver.Options{

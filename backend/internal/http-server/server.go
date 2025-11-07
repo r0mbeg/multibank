@@ -30,6 +30,7 @@ type Deps struct {
 	AuthService    handlers.Auth
 	BankService    handlers.Bank
 	ProductService handlers.Product
+	ConsentService handlers.Consent
 	JWT            *jwt.Manager
 }
 
@@ -95,6 +96,12 @@ func New(deps Deps, opts Options) *Server {
 	r.Route("/products", func(rr chi.Router) {
 		rr.Use(authmw.Auth(deps.JWT))
 		handlers.RegisterProductRoutes(rr, deps.ProductService)
+	})
+
+	// Protected routes /consents
+	r.Route("/consents", func(rr chi.Router) {
+		rr.Use(authmw.Auth(deps.JWT))
+		handlers.RegisterConsentRoutes(rr, deps.ConsentService)
 	})
 
 	// swagger ui

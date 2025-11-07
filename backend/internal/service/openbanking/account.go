@@ -1,11 +1,6 @@
 package openbanking
 
-import (
-	"log/slog"
-	"multibank/backend/internal/domain"
-	"net/http"
-)
-
+/*
 type AccountOperations interface {
 	GetAllAccounts(
 		AccountConsent *domain.FullAccountConsent,
@@ -35,3 +30,4 @@ type AccountClient struct {
 	httpClient *http.Client
 	log        *slog.Logger
 }
+*/
