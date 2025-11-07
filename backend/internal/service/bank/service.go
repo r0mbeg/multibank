@@ -30,6 +30,7 @@ type Service struct {
 type Repository interface {
 	ListEnabledBanks(ctx context.Context) ([]domain.Bank, error)
 	GetBankByID(ctx context.Context, id int64) (domain.Bank, error)
+	GetBankByCode(ctx context.Context, code string) (domain.Bank, error)
 
 	UpsertBankToken(ctx context.Context, t domain.BankToken) error
 	GetBankToken(ctx context.Context, bankID int64) (domain.BankToken, error)
@@ -215,4 +216,8 @@ func (s *Service) EnsureTokensForEnabled(ctx context.Context) error {
 // GetBankDetails returns bank row by id (thin wrapper over repo).
 func (s *Service) GetBankByID(ctx context.Context, id int64) (domain.Bank, error) {
 	return s.repo.GetBankByID(ctx, id)
+}
+
+func (s *Service) GetBankByCode(ctx context.Context, code string) (domain.Bank, error) {
+	return s.repo.GetBankByCode(ctx, code)
 }

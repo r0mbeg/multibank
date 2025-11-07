@@ -7,6 +7,7 @@ import (
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/logger"
 	ob "multibank/backend/internal/service/openbanking"
+	"strings"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type ConsentRepo interface {
 
 type BankService interface {
 	GetBankByID(ctx context.Context, id int64) (domain.Bank, error)
+	GetBankByCode(ctx context.Context, code string) (domain.Bank, error)
 	// token for the request to the bank
 	GetOrRefreshToken(ctx context.Context, bankID int64) (string, time.Time, error)
 }
@@ -48,39 +50,38 @@ func New(log *slog.Logger, repo ConsentRepo, banks BankService, client OBConsent
 }
 
 type CreateInput struct {
-	UserID      int64
-	BankID      int64
-	ClientID    string              // clien_id from FRONTEND
-	Permissions []domain.Permission // perms can be overrided
+	UserID   int64
+	BankCode string // (оставим по id; если хочешь по имени — скажу где поменять)
+	ClientID string // comes from FRONTEND
+	// Permissions []domain.Permission // always default
 }
 
 func (s *Service) Request(ctx context.Context, in CreateInput) (int64, error) {
-
 	const op = "service.consent.Request"
 
-	log := s.log.With(slog.String("op", op))
+	log := s.log.With(
+		slog.String("op", op),
+		slog.String("bank_code", in.BankCode),
+	)
 
-	bank, err := s.banks.GetBankByID(ctx, in.BankID)
+	log.Info("requesting a new consent")
+
+	bank, err := s.banks.GetBankByCode(ctx, in.BankCode)
 	if err != nil {
-		log.Warn("failed to get bank",
-			slog.Int64("bank_id", in.BankID),
-			logger.Err(err),
-		)
-		return 0, err
-	}
-	token, _, err := s.banks.GetOrRefreshToken(ctx, in.BankID)
-	if err != nil {
-		log.Warn("failed to get bank access token",
-			slog.Int64("bank_id", in.BankID),
-			logger.Err(err),
-		)
+		log.Warn("failed to get bank", logger.Err(err))
 		return 0, err
 	}
 
-	perms := in.Permissions
-	if len(perms) == 0 {
-		perms = s.defaultPerms
+	log = log.With(slog.Int64("bank_id", bank.ID))
+
+	token, _, err := s.banks.GetOrRefreshToken(ctx, bank.ID)
+	if err != nil {
+		log.Warn("failed to get bank access token", slog.Int64("bank_id", bank.ID), logger.Err(err))
+		return 0, err
 	}
+
+	// фиксированный набор разрешений
+	perms := s.defaultPerms
 
 	resp, err := s.client.RequestConsent(bank, in.ClientID, perms, token)
 	if err != nil {
@@ -89,24 +90,76 @@ func (s *Service) Request(ctx context.Context, in CreateInput) (int64, error) {
 	}
 
 	now := time.Now()
-	status := domain.ConsentStatus(resp.Status)
+
+	status := normalizeRequestStatus(resp.Status, resp.AutoApproved)
+
+	var (
+		creation  *time.Time
+		updated   *time.Time
+		expire    *time.Time
+		consentID *string = resp.ConsentID
+	)
+
+	// Если автоодобрено — подтянем детальный вид, чтобы заполнить даты.
+	if resp.AutoApproved != nil && *resp.AutoApproved {
+		key := resp.RequestID
+		if consentID != nil && *consentID != "" {
+			key = *consentID
+		}
+		if v, err := s.client.GetConsent(bank, key, s.reqBankCode); err == nil {
+			// у банка уже правильные CamelCase статусы
+			status = domain.ConsentStatus(v.Data.Status) // "Authorized"
+			creation = &v.Data.CreationDateTime
+			updated = &v.Data.StatusUpdateDateTime
+			expire = &v.Data.ExpirationDateTime
+			// иногда consentID выдают только в GET
+			if v.Data.ConsentID != "" {
+				cid := v.Data.ConsentID
+				consentID = &cid
+			}
+		} else {
+			log.Warn("auto-approved but failed to fetch detailed consent", logger.Err(err))
+		}
+	}
 
 	c := &domain.AccountConsent{
 		UserID:             in.UserID,
-		BankID:             in.BankID,
+		BankID:             bank.ID,
 		RequestID:          resp.RequestID,
-		ConsentID:          resp.ConsentID,
+		ConsentID:          consentID,
 		Status:             status,
 		AutoApproved:       resp.AutoApproved,
+		ClientID:           in.ClientID,
 		Permissions:        perms,
 		Reason:             s.defaultReason,
 		RequestingBank:     s.reqBankCode,
 		RequestingBankName: s.reqBankName,
 		CreatedAt:          now,
 		UpdatedAt:          now,
-		BankStatus:         &resp.Status,
+
+		CreationDateTime:     creation,
+		StatusUpdateDateTime: updated,
+		ExpirationDateTime:   expire,
 	}
 	return s.repo.Create(ctx, c)
+}
+
+func normalizeRequestStatus(raw string, auto *bool) domain.ConsentStatus {
+	if auto != nil && *auto {
+		return domain.Authorised
+	}
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "approved", "authorised", "authorized":
+		return domain.Authorised
+	case "pending", "awaitingauthorization", "awaitingauthorisation":
+		return domain.AwaitingAuthorisation
+	case "rejected":
+		return domain.Rejected
+	case "revoked":
+		return domain.Revoked
+	default:
+		return domain.ConsentStatus(raw)
+	}
 }
 
 func (s *Service) Refresh(ctx context.Context, id int64) (domain.AccountConsent, error) {
@@ -124,22 +177,23 @@ func (s *Service) Refresh(ctx context.Context, id int64) (domain.AccountConsent,
 	if c.ConsentID != nil && *c.ConsentID != "" {
 		key = *c.ConsentID
 	}
-	v, err := s.client.GetConsent(bank, key, s.reqBankCode) // x-fapi-interaction-id
+
+	v, err := s.client.GetConsent(bank, key, s.reqBankCode)
 	if err != nil {
 		return domain.AccountConsent{}, err
 	}
 
-	our := domain.AccountConsent{
-		Status: domain.ConsentStatus(v.Data.Status),
+	upd := domain.AccountConsent{
+		Status:               domain.ConsentStatus(v.Data.Status),
+		CreationDateTime:     &v.Data.CreationDateTime,
+		StatusUpdateDateTime: &v.Data.StatusUpdateDateTime,
+		ExpirationDateTime:   &v.Data.ExpirationDateTime,
+		AutoApproved:         nil, // не меняем
 	}
-	consentID := v.Data.ConsentID
-	our.ConsentID = &consentID
-	our.BankStatus = &v.Data.Status
-	our.BankCreationDateTime = &v.Data.CreationDateTime
-	our.BankStatusUpdateTime = &v.Data.StatusUpdateDateTime
-	our.BankExpirationTime = &v.Data.ExpirationDateTime
+	cid := v.Data.ConsentID
+	upd.ConsentID = &cid
 
-	if err := s.repo.UpdateAfterCheck(ctx, c.ID, &our); err != nil {
+	if err := s.repo.UpdateAfterCheck(ctx, c.ID, &upd); err != nil {
 		return domain.AccountConsent{}, err
 	}
 	return s.repo.GetByID(ctx, c.ID)

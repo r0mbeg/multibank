@@ -57,8 +57,8 @@ func New(storagePath string) (*Storage, error) {
 	}
 
 	// one writer to DB
-	db.SetMaxOpenConns(1)
-	db.SetMaxIdleConns(1)
+	db.SetMaxOpenConns(10)
+	db.SetMaxIdleConns(10)
 	db.SetConnMaxLifetime(0)
 
 	// 5) conn check

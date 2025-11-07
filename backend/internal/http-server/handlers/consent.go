@@ -65,10 +65,10 @@ func (h *ConsentHandler) request(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id, err := h.svc.Request(r.Context(), consent.CreateInput{
-		UserID:      userID,
-		BankID:      req.BankID,
-		ClientID:    req.ClientID,
-		Permissions: req.Permissions, // если пусто — сервис подставит дефолт
+		UserID:   userID,
+		BankCode: req.BankCode,
+		ClientID: req.ClientID,
+		//Permissions: req.Permissions, // если пусто — сервис подставит дефолт
 	})
 	if err != nil {
 		httputils.WriteError(w, http.StatusInternalServerError, err.Error())
@@ -183,22 +183,20 @@ func (h *ConsentHandler) delete(w http.ResponseWriter, r *http.Request) {
 
 func toConsentResponse(c domain.AccountConsent) dto.ConsentResponse {
 	return dto.ConsentResponse{
-		ID:                 c.ID,
-		RequestID:          c.RequestID,
-		ConsentID:          c.ConsentID,
-		Status:             c.Status, // уже CamelCase из домена
-		AutoApproved:       c.AutoApproved,
-		Permissions:        c.Permissions,
-		Reason:             c.Reason,
-		RequestingBank:     c.RequestingBank,
-		RequestingBankName: c.RequestingBankName,
+		ID:        c.ID,
+		RequestID: c.RequestID,
+		ConsentID: c.ConsentID,
+		BankCode:  c.BankCode,
 
-		BankStatus:           c.BankStatus,
-		BankCreationDateTime: c.BankCreationDateTime,
-		BankStatusUpdateTime: c.BankStatusUpdateTime,
-		BankExpirationTime:   c.BankExpirationTime,
-
-		CreatedAt: c.CreatedAt,
-		UpdatedAt: c.UpdatedAt,
+		Status:       c.Status,
+		AutoApproved: c.AutoApproved,
+		ClientID:     c.ClientID,
+		Permissions:  c.Permissions,
+		// ...
+		CreationDateTime:     c.CreationDateTime,
+		StatusUpdateDateTime: c.StatusUpdateDateTime,
+		ExpirationDateTime:   c.ExpirationDateTime,
+		CreatedAt:            c.CreatedAt,
+		UpdatedAt:            c.UpdatedAt,
 	}
 }

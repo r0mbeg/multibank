@@ -86,6 +86,29 @@ func (s *BankRepo) GetBankByID(ctx context.Context, id int64) (domain.Bank, erro
 	return b, nil
 }
 
+func (s *BankRepo) GetBankByCode(ctx context.Context, code string) (domain.Bank, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, name, code, api_base_url, login, password, is_enabled, created_at, updated_at
+		FROM banks WHERE code = ?`, code)
+
+	var b domain.Bank
+	var en int
+	var created, updated string
+
+	if err := row.Scan(&b.ID, &b.Name, &b.Code, &b.APIBaseURL, &b.Login, &b.Password, &en, &created, &updated); err != nil {
+		return domain.Bank{}, err
+	}
+	b.IsEnabled = en == 1
+
+	if t, err := sqliteutils.ParseTS(created); err == nil {
+		b.CreatedAt = t
+	}
+	if t, err := sqliteutils.ParseTS(updated); err == nil {
+		b.UpdatedAt = t
+	}
+	return b, nil
+}
+
 func (s *BankRepo) UpsertBankToken(ctx context.Context, t domain.BankToken) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO bank_tokens(bank_id, access_token, expires_at, updated_at)
