@@ -6,6 +6,9 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -16,14 +19,36 @@ type Storage struct {
 }
 
 func New(storagePath string) (*Storage, error) {
-
 	const op = "storage.sqlite.New"
 
 	if storagePath == "" {
 		return nil, fmt.Errorf("%s: empty storage path", op)
 	}
 
-	// connection params (timeout, wal mode, foreign keys)
+	// 1) make sure that the parent directory exists
+	dir := filepath.Dir(storagePath)
+	if dir == "." || dir == "/" {
+		// the relative file in the current directory is ok
+	} else {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return nil, fmt.Errorf("%s: mkdir %q: %w", op, dir, err)
+		}
+	}
+
+	// 2) If the storagePath points to a directory => error
+	if fi, err := os.Stat(storagePath); err == nil && fi.IsDir() {
+		return nil, fmt.Errorf("%s: path %q is a directory, expected file", op, storagePath)
+	}
+
+	// 3) touch DB file, to get an understandable rights/path error before opening sqlite
+	// O_CREATE will not recreate an existing file
+	f, err := os.OpenFile(storagePath, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("%s: create/open %q: %w", op, storagePath, err)
+	}
+	_ = f.Close()
+
+	// 4) connection string (busy_timeout, foreign_keys и т.п.)
 	dsn := fmt.Sprintf("file:%s?_pragma=busy_timeout(5000)&_pragma=journal_mode(DELETE)&_pragma=foreign_keys(ON)", storagePath)
 
 	db, err := sql.Open("sqlite", dsn)
@@ -31,17 +56,17 @@ func New(storagePath string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: open: %w", op, err)
 	}
 
-	// single writer
+	// one writer to DB
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	db.SetConnMaxLifetime(0)
 
-	// connection check (creates database)
+	// 5) conn check
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	if err := db.PingContext(ctx); err != nil {
 		_ = db.Close()
-		return nil, fmt.Errorf("%s: ping: %w", op, err)
+		return nil, fmt.Errorf("%s: ping: %w", op, translateSQLiteOpenErr(err))
 	}
 
 	return &Storage{db: db}, nil
@@ -49,6 +74,16 @@ func New(storagePath string) (*Storage, error) {
 
 func (s *Storage) Close() error { return s.db.Close() }
 func (s *Storage) DB() *sql.DB  { return s.db }
+
+// translateSQLiteOpenErr makes the message clearer for the most common cases
+func translateSQLiteOpenErr(err error) error {
+	// modernc.org/sqlite usually returns "unable to open database file: out of memory (14)"
+	// but in fact the problem is about the dir
+	if strings.Contains(err.Error(), "unable to open database file") {
+		return fmt.Errorf("unable to open database file (check the existence of the directory and write permissions): %w", err)
+	}
+	return err
+}
 
 // Migrate - idempotent schema initialization/migration.
 func (s *Storage) Migrate(ctx context.Context) error {
