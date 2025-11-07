@@ -52,9 +52,7 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	bankRepo := sqlite.NewBankRepo(st.DB())
 	bankSvc := bank.New(log, bankRepo)
 
-	productsClient := &openbanking.ProductsClient{
-		HTTP: &http.Client{Timeout: 10 * time.Second},
-	}
+	productsClient := openbanking.NewProductClient(log, &http.Client{Timeout: 10 * time.Second})
 	prodSvc := product.New(log, bankRepo, bankSvc, productsClient)
 
 	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)

@@ -3,6 +3,7 @@ package product
 
 import (
 	"context"
+	"multibank/backend/internal/logger"
 	"sync"
 
 	"golang.org/x/sync/errgroup"
@@ -27,17 +28,23 @@ type Service struct {
 	log    *slog.Logger
 	repo   BanksRepo  // чтобы получить список банков
 	tokens BankTokens // чтобы достать токен
-	client *openbanking.ProductsClient
+	client *openbanking.ProductClient
 }
 
-func New(log *slog.Logger, repo BanksRepo, tokens *bank.Service, httpClient *openbanking.ProductsClient) *Service {
+func New(log *slog.Logger, repo BanksRepo, tokens *bank.Service, httpClient *openbanking.ProductClient) *Service {
 	return &Service{log: log, repo: repo, tokens: tokens, client: httpClient}
 }
 
 func (s *Service) List(ctx context.Context, f domain.ProductFilter) ([]domain.Product, error) {
+
+	const op = "service.product.List"
+
+	log := s.log.With(slog.String("op", op))
+
 	// 1) банки
 	banks, err := s.repo.ListEnabledBanks(ctx)
 	if err != nil {
+		log.Warn("failed to list enabled banks")
 		return nil, err
 	}
 
@@ -56,33 +63,46 @@ func (s *Service) List(ctx context.Context, f domain.ProductFilter) ([]domain.Pr
 		banks = tmp
 	}
 
-	// 2) параллельные запросы в банки
+	// 2) parallel requests to banks
 	var mu sync.Mutex
 	out := make([]domain.Product, 0, len(banks)*8)
 
 	eg, ctx := errgroup.WithContext(ctx)
-	eg.SetLimit(8) // ограничим параллелизм
+	eg.SetLimit(8) // limit parallelism (sth like worker pool)
 
 	for _, b := range banks {
 		b := b
 		eg.Go(func() error {
-			// токен (если каталог публичный — токен можно опустить; но оставим универсально)
+			// token (if the catalog is public, token can be omited)
 			token, _, err := s.tokens.GetOrRefreshToken(ctx, b.ID)
 			if err != nil {
-				// мягко пропускаем банк, но возвращаем ошибку, если хочешь — меняй политику
-				s.log.Warn("cannot get token for products", slog.Int64("bank_id", b.ID), slog.String("bank", b.Code), slog.Any("err", err))
+				// мягко пропускаем банк, но возвращаем ошибку
+				log.Warn("cannot get token for products",
+					slog.Int64("bank_id", b.ID),
+					slog.String("bank", b.Code),
+					logger.Err(err),
+				)
 				return nil
 			}
 
 			items, err := s.client.GetProducts(ctx, b.APIBaseURL, token, f.ProductType)
 			if err != nil {
-				s.log.Warn("products fetch failed", slog.Int64("bank_id", b.ID), slog.String("bank", b.Code), slog.Any("err", err))
+				log.Warn("products fetch failed",
+					slog.Int64("bank_id", b.ID),
+					slog.String("bank", b.Code),
+					logger.Err(err),
+				)
 				return nil
 			}
 			// map
 			loc := make([]domain.Product, 0, len(items))
 			for _, it := range items {
-				loc = append(loc, it.ToDomain(b.ID, b.Code, b.Name))
+
+				it.BankID = b.ID
+				it.BankCode = b.Code
+				it.BankName = b.Name
+				
+				loc = append(loc, it)
 			}
 			mu.Lock()
 			out = append(out, loc...)
@@ -90,7 +110,7 @@ func (s *Service) List(ctx context.Context, f domain.ProductFilter) ([]domain.Pr
 			return nil
 		})
 	}
-	_ = eg.Wait() // ошибки мы уже «проглотили» и залогировали
+	_ = eg.Wait() // errors are already passed and logged
 
 	return out, nil
 }
