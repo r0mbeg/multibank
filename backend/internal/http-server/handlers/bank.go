@@ -21,6 +21,7 @@ type Bank interface {
 	TokenStatus(ctx context.Context, bankID int64) (bool, time.Time, error)
 	GetOrRefreshToken(ctx context.Context, bankID int64) (string, time.Time, error)
 	EnsureTokensForEnabled(ctx context.Context) error
+	EnsureTokensForEnabledWithWorkers(ctx context.Context, workers int) error
 }
 
 type BankHandler struct {

@@ -212,7 +212,7 @@ const docTemplate = `{
                         "BearerAuth": []
                     }
                 ],
-                "description": "Returns the user's consent. It can be filtered by bank.",
+                "description": "Returns the user's consents. Can be filtered by bank.",
                 "produces": [
                     "application/json"
                 ],
@@ -629,9 +629,9 @@ const docTemplate = `{
         "domain.ConsentStatus": {
             "type": "string",
             "enum": [
-                "AwaitingAuthorisation",
+                "AwaitingAuthorization",
                 "Rejected",
-                "Authorised",
+                "Authorized",
                 "Revoked"
             ],
             "x-enum-varnames": [
@@ -712,20 +712,13 @@ const docTemplate = `{
         "dto.ConsentCreateRequest": {
             "type": "object",
             "properties": {
-                "bank_id": {
-                    "description": "указываем, с каким банком",
-                    "type": "integer"
-                },
-                "client_id": {
-                    "description": "с фронта",
+                "bank_code": {
+                    "description": "instead of bank_id",
                     "type": "string"
                 },
-                "permissions": {
-                    "description": "опционально, иначе дефолт",
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/domain.Permission"
-                    }
+                "client_id": {
+                    "description": "e.g. team014-1",
+                    "type": "string"
                 }
             }
         },
@@ -735,22 +728,22 @@ const docTemplate = `{
                 "auto_approved": {
                     "type": "boolean"
                 },
-                "bank_creation_datetime": {
+                "bank_code": {
                     "type": "string"
                 },
-                "bank_expiration_datetime": {
-                    "type": "string"
-                },
-                "bank_status": {
-                    "type": "string"
-                },
-                "bank_status_update_datetime": {
+                "client_id": {
                     "type": "string"
                 },
                 "consent_id": {
                     "type": "string"
                 },
                 "created_at": {
+                    "type": "string"
+                },
+                "creation_datetime": {
+                    "type": "string"
+                },
+                "expiration_datetime": {
                     "type": "string"
                 },
                 "id": {
@@ -776,6 +769,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "$ref": "#/definitions/domain.ConsentStatus"
+                },
+                "status_update_datetime": {
+                    "type": "string"
                 },
                 "updated_at": {
                     "type": "string"

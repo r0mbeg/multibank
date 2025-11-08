@@ -124,13 +124,9 @@ func (c *ConsentClient) RequestConsent(bank domain.Bank, clientID string, perms 
 	return &out, nil
 }
 
-func (c *ConsentClient) GetConsent(bank domain.Bank, requestOrConsentID string, xFapi string) (*ConsentViewWrapper, error) {
-
+func (c *ConsentClient) GetConsent(bank domain.Bank, requestOrConsentID, bearer, xFapi string) (*ConsentViewWrapper, error) {
 	const op = "service.openbanking.GetConsent"
-
-	log := c.log.With(
-		slog.String("op", op),
-	)
+	log := c.log.With(slog.String("op", op))
 
 	base, err := httputils.NormalizeURL(bank.APIBaseURL)
 	if err != nil {
@@ -140,11 +136,24 @@ func (c *ConsentClient) GetConsent(bank domain.Bank, requestOrConsentID string, 
 	u, _ := url.JoinPath(base.String(), "account-consents", requestOrConsentID)
 
 	req, _ := http.NewRequest("GET", u, nil)
+
+	// ОБЯЗАТЕЛЬНО: авторизация
+	if bearer != "" {
+		req.Header.Set("Authorization", "Bearer "+bearer)
+	} else {
+		log.Warn("bearer token is blank")
+	}
+
+	// по желанию: прокидываем идентификатор инициирующего банка
+	req.Header.Set("X-Requesting-Bank", c.RequestingBank)
+
+	// опционально: x-fapi-interaction-id
 	if xFapi != "" {
 		req.Header.Set("x-fapi-interaction-id", xFapi)
 	} else {
 		c.log.Warn("x-fapi-interaction-id is blank")
 	}
+
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		log.Warn("failed to get consent", logger.Err(err))

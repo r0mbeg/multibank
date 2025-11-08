@@ -17,6 +17,7 @@ type ConsentRepo interface {
 	GetByID(ctx context.Context, id int64) (domain.AccountConsent, error)
 	ListByUser(ctx context.Context, userID int64, bankID *int64) ([]domain.AccountConsent, error)
 	DeleteByID(ctx context.Context, id int64) error
+	ListNeedingRefresh(ctx context.Context, limit int) ([]domain.AccountConsent, error)
 }
 
 type BankService interface {
@@ -28,7 +29,7 @@ type BankService interface {
 
 type OBConsentClient interface {
 	RequestConsent(bank domain.Bank, clientID string, perms []domain.Permission, bearer string) (*ob.ConsentRequestResp, error)
-	GetConsent(bank domain.Bank, requestOrConsentID string, xFapi string) (*ob.ConsentViewWrapper, error)
+	GetConsent(bank domain.Bank, requestOrConsentID, bearer, xFapi string) (*ob.ConsentViewWrapper, error)
 }
 
 type Service struct {
@@ -106,19 +107,24 @@ func (s *Service) Request(ctx context.Context, in CreateInput) (int64, error) {
 		if consentID != nil && *consentID != "" {
 			key = *consentID
 		}
-		if v, err := s.client.GetConsent(bank, key, s.reqBankCode); err == nil {
-			// у банка уже правильные CamelCase статусы
-			status = domain.ConsentStatus(v.Data.Status) // "Authorized"
-			creation = &v.Data.CreationDateTime
-			updated = &v.Data.StatusUpdateDateTime
-			expire = &v.Data.ExpirationDateTime
-			// иногда consentID выдают только в GET
-			if v.Data.ConsentID != "" {
-				cid := v.Data.ConsentID
-				consentID = &cid
+
+		// получить токен и пробросить в GetConsent
+		token, _, errTok := s.banks.GetOrRefreshToken(ctx, bank.ID)
+		if errTok == nil {
+			if v, err := s.client.GetConsent(bank, key, token, s.reqBankCode); err == nil {
+				status = domain.ConsentStatus(v.Data.Status)
+				creation = &v.Data.CreationDateTime
+				updated = &v.Data.StatusUpdateDateTime
+				expire = &v.Data.ExpirationDateTime
+				if v.Data.ConsentID != "" {
+					cid := v.Data.ConsentID
+					consentID = &cid
+				}
+			} else {
+				log.Warn("auto-approved but failed to fetch detailed consent", logger.Err(err))
 			}
 		} else {
-			log.Warn("auto-approved but failed to fetch detailed consent", logger.Err(err))
+			log.Warn("auto-approved but failed to refresh bank token", logger.Err(errTok))
 		}
 	}
 
@@ -173,12 +179,19 @@ func (s *Service) Refresh(ctx context.Context, id int64) (domain.AccountConsent,
 		return domain.AccountConsent{}, err
 	}
 
+	// получить/обновить токен
+	token, _, err := s.banks.GetOrRefreshToken(ctx, bank.ID)
+	if err != nil {
+		return domain.AccountConsent{}, err
+	}
+
 	key := c.RequestID
 	if c.ConsentID != nil && *c.ConsentID != "" {
 		key = *c.ConsentID
 	}
 
-	v, err := s.client.GetConsent(bank, key, s.reqBankCode)
+	// передаём bearer
+	v, err := s.client.GetConsent(bank, key, token, s.reqBankCode)
 	if err != nil {
 		return domain.AccountConsent{}, err
 	}
@@ -188,7 +201,7 @@ func (s *Service) Refresh(ctx context.Context, id int64) (domain.AccountConsent,
 		CreationDateTime:     &v.Data.CreationDateTime,
 		StatusUpdateDateTime: &v.Data.StatusUpdateDateTime,
 		ExpirationDateTime:   &v.Data.ExpirationDateTime,
-		AutoApproved:         nil, // не меняем
+		AutoApproved:         nil,
 	}
 	cid := v.Data.ConsentID
 	upd.ConsentID = &cid
@@ -208,6 +221,60 @@ func (s *Service) ListMine(ctx context.Context, userID int64, bankID *int64) ([]
 }
 
 func (s *Service) Delete(ctx context.Context, id int64) error {
-	// здесь можно дополнительно позвать DELETE в банк (если есть).
+	// по идее нужно вызывать DeleteByID из openbanking
 	return s.repo.DeleteByID(ctx, id)
+}
+
+// RefreshStale finds and updates a bundle of consents. Returns the number of successfully updated ones.
+func (s *Service) RefreshStale(ctx context.Context, batchLimit, workers int) (int, error) {
+	if workers <= 0 {
+		workers = 1
+	}
+	if batchLimit <= 0 {
+		batchLimit = 50
+	}
+
+	items, err := s.repo.ListNeedingRefresh(ctx, batchLimit)
+	if err != nil {
+		return 0, err
+	}
+	if len(items) == 0 {
+		return 0, nil
+	}
+
+	sem := make(chan struct{}, workers)
+	done := make(chan int, len(items))
+
+	for _, it := range items {
+		it := it
+		select {
+		case <-ctx.Done():
+			return 0, ctx.Err()
+		case sem <- struct{}{}:
+		}
+
+		go func() {
+			defer func() { <-sem }()
+			// используем уже готовую логику Refresh
+			if _, err := s.Refresh(ctx, it.ID); err == nil {
+				done <- 1
+			} else {
+				s.log.Warn("consent refresh failed", slog.Int64("id", it.ID), logger.Err(err))
+				done <- 0
+			}
+		}()
+	}
+
+	// wait for all
+	// do not need to close sem
+	total := 0
+	for i := 0; i < len(items); i++ {
+		select {
+		case <-ctx.Done():
+			return total, ctx.Err()
+		case v := <-done:
+			total += v
+		}
+	}
+	return total, nil
 }

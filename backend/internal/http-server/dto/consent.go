@@ -7,9 +7,9 @@ import (
 )
 
 type ConsentCreateRequest struct {
-	BankCode    string              `json:"bank_code"`             // instead of bank_id
-	ClientID    string              `json:"client_id"`             // e.g. team014-1
-	Permissions []domain.Permission `json:"permissions,omitempty"` // always default
+	BankCode string `json:"bank_code"` // instead of bank_id
+	ClientID string `json:"client_id"` // e.g. team014-1
+	//Permissions []domain.Permission `json:"permissions,omitempty"` // always default
 }
 
 type ConsentResponse struct {

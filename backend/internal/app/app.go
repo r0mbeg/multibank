@@ -66,6 +66,7 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 		"Агрегация счетов для HackAPI", // Reason
 	)
 
+	// using default permissions (all)
 	defaultPerms := []domain.Permission{
 		domain.ReadAccountsDetail,
 		domain.ReadBalances,
@@ -98,9 +99,15 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 			JWT:            jwtMgr,
 		},
 		httpserver.Options{
-			RequestTimeout:     cfg.HTTPServer.Timeout,
+			RequestTimeout: cfg.HTTPServer.Timeout,
+
 			BankEnsureOnStart:  true,             // check tokens on start
 			BankEnsureInterval: 10 * time.Minute, // check tokens every ... minutes (e.g.)
+			BankEnsureWorkers:  2,
+
+			ConsentEnsureOnStart:  true,
+			ConsentEnsureInterval: 5 * time.Minute,
+			ConsentEnsureWorkers:  4,
 		},
 	)
 

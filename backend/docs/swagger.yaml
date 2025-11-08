@@ -2,9 +2,9 @@ basePath: /
 definitions:
   domain.ConsentStatus:
     enum:
-    - AwaitingAuthorisation
+    - AwaitingAuthorization
     - Rejected
-    - Authorised
+    - Authorized
     - Revoked
     type: string
     x-enum-varnames:
@@ -63,33 +63,28 @@ definitions:
     type: object
   dto.ConsentCreateRequest:
     properties:
-      bank_id:
-        description: указываем, с каким банком
-        type: integer
-      client_id:
-        description: с фронта
+      bank_code:
+        description: instead of bank_id
         type: string
-      permissions:
-        description: опционально, иначе дефолт
-        items:
-          $ref: '#/definitions/domain.Permission'
-        type: array
+      client_id:
+        description: e.g. team014-1
+        type: string
     type: object
   dto.ConsentResponse:
     properties:
       auto_approved:
         type: boolean
-      bank_creation_datetime:
+      bank_code:
         type: string
-      bank_expiration_datetime:
-        type: string
-      bank_status:
-        type: string
-      bank_status_update_datetime:
+      client_id:
         type: string
       consent_id:
         type: string
       created_at:
+        type: string
+      creation_datetime:
+        type: string
+      expiration_datetime:
         type: string
       id:
         type: integer
@@ -107,6 +102,8 @@ definitions:
         type: string
       status:
         $ref: '#/definitions/domain.ConsentStatus'
+      status_update_datetime:
+        type: string
       updated_at:
         type: string
     type: object
@@ -374,7 +371,7 @@ paths:
       - banks
   /consents:
     get:
-      description: Returns the user's consent. It can be filtered by bank.
+      description: Returns the user's consents. Can be filtered by bank.
       parameters:
       - description: Filter by bank id
         in: query

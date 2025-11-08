@@ -4,6 +4,7 @@ package httpserver
 
 import (
 	"context"
+	"multibank/backend/internal/logger"
 	"multibank/backend/internal/service/auth/jwt"
 	authmw "multibank/backend/internal/service/auth/middleware"
 	stdhttp "net/http"
@@ -21,7 +22,9 @@ import (
 )
 
 type Server struct {
-	mux *chi.Mux
+	mux      *chi.Mux
+	logger   *slog.Logger
+	shutdown chan struct{} // channel for graceful completing background cycles
 }
 
 type Deps struct {
@@ -35,9 +38,15 @@ type Deps struct {
 }
 
 type Options struct {
-	RequestTimeout     time.Duration
+	RequestTimeout time.Duration
+
 	BankEnsureOnStart  bool          // getting tokens on startup
 	BankEnsureInterval time.Duration // periodic ensure, 0 = disable
+	BankEnsureWorkers  int
+
+	ConsentEnsureOnStart  bool
+	ConsentEnsureInterval time.Duration
+	ConsentEnsureWorkers  int
 }
 
 func New(deps Deps, opts Options) *Server {
@@ -107,30 +116,134 @@ func New(deps Deps, opts Options) *Server {
 	// swagger ui
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
+	srv := &Server{
+		mux:      r,
+		logger:   deps.Logger,
+		shutdown: make(chan struct{}),
+	}
+
+	// ensure Banks TOKENS
 	if opts.BankEnsureOnStart {
-		go func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-			defer cancel()
-			if err := deps.BankService.EnsureTokensForEnabled(ctx); err != nil {
-				deps.Logger.Warn("ensure tokens on start failed", slog.Any("err", err))
-			}
-		}()
+		go srv.ensureBanksOnce(deps, 20*time.Second, opts.BankEnsureWorkers)
 	}
-
 	if opts.BankEnsureInterval > 0 {
-		go func() {
-			t := time.NewTicker(opts.BankEnsureInterval)
-			defer t.Stop()
-			for range t.C {
-				// no timeout (~but can be small)
-				if err := deps.BankService.EnsureTokensForEnabled(context.Background()); err != nil {
-					deps.Logger.Warn("scheduled token ensure failed", slog.Any("err", err))
-				}
-			}
-		}()
+		go srv.runBankEnsureLoop(deps, opts)
 	}
 
-	return &Server{mux: r}
+	// ensure Account Consents
+	if opts.ConsentEnsureOnStart || opts.ConsentEnsureInterval > 0 {
+		go srv.runConsentEnsureLoop(deps, opts)
+	}
+	return srv
 }
 
 func (s *Server) Handler() stdhttp.Handler { return s.mux }
+
+// Stop stops background loops (should be used in graceful shutdown)
+func (s *Server) Stop() {
+	select {
+	case <-s.shutdown:
+		// already closed
+	default:
+		close(s.shutdown)
+	}
+}
+
+// ensureBanksOnce
+func (s *Server) ensureBanksOnce(deps Deps, timeout time.Duration, workers int) {
+	if workers <= 0 {
+		workers = 1
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	if err := deps.BankService.EnsureTokensForEnabledWithWorkers(ctx, workers); err != nil {
+		s.logger.Warn("ensure bank tokens on start failed",
+			slog.Any("err", err),
+			slog.Int("workers", workers),
+		)
+	} else {
+		s.logger.Info("ensure bank tokens on start ok",
+			slog.Int("workers", workers),
+		)
+	}
+}
+
+// runBankEnsureLoop periodically checks bank tokens
+func (s *Server) runBankEnsureLoop(deps Deps, opt Options) {
+	if opt.BankEnsureInterval <= 0 {
+		return
+	}
+	t := time.NewTicker(opt.BankEnsureInterval)
+	defer t.Stop()
+
+	for {
+		select {
+		case <-s.shutdown:
+			s.logger.Info("stopping bank ensure loop")
+			return
+		case <-t.C:
+			workers := opt.BankEnsureWorkers
+			if workers <= 0 {
+				workers = 1
+			}
+			// даём половину интервала на выполнение цикла
+			ctx, cancel := context.WithTimeout(context.Background(), opt.BankEnsureInterval/2)
+			if err := deps.BankService.EnsureTokensForEnabledWithWorkers(ctx, workers); err != nil {
+				s.logger.Warn("scheduled bank token ensure failed",
+					slog.Any("err", err),
+					slog.Int("workers", workers),
+				)
+			} else {
+				s.logger.Info("scheduled bank token ensure ok",
+					slog.Int("workers", workers),
+				)
+			}
+			cancel()
+		}
+	}
+}
+
+func (s *Server) runConsentEnsureLoop(deps Deps, opt Options) {
+	log := s.logger.With(slog.String("component", "consent-ensure"))
+	workers := opt.ConsentEnsureWorkers
+	if workers <= 0 {
+		workers = 2
+	}
+
+	// разово на старте
+	if opt.ConsentEnsureOnStart {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		n, err := deps.ConsentService.RefreshStale(ctx, 100, workers)
+		cancel()
+		if err != nil {
+			log.Warn("initial consent ensure failed", logger.Err(err))
+		} else {
+			log.Info("initial consent ensure done", slog.Int("updated", n))
+		}
+	}
+
+	if opt.ConsentEnsureInterval <= 0 {
+		return
+	}
+
+	ticker := time.NewTicker(opt.ConsentEnsureInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-s.shutdown:
+			log.Info("stopping consent ensure loop")
+			return
+		case <-ticker.C:
+			ctx, cancel := context.WithTimeout(context.Background(), opt.ConsentEnsureInterval/2)
+			n, err := deps.ConsentService.RefreshStale(ctx, 100, workers)
+			cancel()
+			if err != nil {
+				log.Warn("periodic consent ensure failed", logger.Err(err))
+			} else if n > 0 {
+				log.Info("periodic consent ensure", slog.Int("updated", n))
+			}
+		}
+	}
+}

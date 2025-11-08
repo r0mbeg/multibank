@@ -158,32 +158,45 @@ CREATE TABLE IF NOT EXISTS bank_tokens(
 
 	// consents
 	if _, err = tx.ExecContext(ctx, `
-	CREATE TABLE IF NOT EXISTS account_consents (
-    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id             INTEGER NOT NULL,
-    bank_id             INTEGER NOT NULL,
-    request_id          TEXT    NOT NULL UNIQUE,
-    consent_id          TEXT,
-    status              TEXT    NOT NULL, -- 'AwaitingAuthorisation' | 'Rejected' | 'Authorised' | 'Revoked'
-    auto_approved       INTEGER,          -- NULL | 0 | 1
-    permissions_json    TEXT    NOT NULL, -- JSON array of strings
-    reason              TEXT    NOT NULL,
-    requesting_bank     TEXT    NOT NULL,
-    requesting_bank_name TEXT   NOT NULL,
+CREATE TABLE IF NOT EXISTS account_consents (
+  id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id                INTEGER NOT NULL,
+  bank_id                INTEGER NOT NULL,
+  request_id             TEXT    NOT NULL UNIQUE,
+  consent_id             TEXT    UNIQUE,
+  status                 TEXT    NOT NULL,     -- Authorised | AwaitingAuthorisation | Rejected | Revoked
+  auto_approved          INTEGER,              -- NULL | 0 | 1
+  permissions_json       TEXT    NOT NULL,     -- JSON-массив строк
 
-    bank_status              TEXT,
-    bank_creation_datetime   TEXT,
-    bank_status_update_datetime TEXT,
-    bank_expiration_datetime TEXT,
+  reason                 TEXT    NOT NULL,
+  requesting_bank        TEXT    NOT NULL,
+  requesting_bank_name   TEXT    NOT NULL,
 
-    created_at          TEXT    NOT NULL DEFAULT (datetime('now')),
-    updated_at          TEXT    NOT NULL DEFAULT (datetime('now')),
+  creation_datetime      TEXT,
+  status_update_datetime TEXT,
+  expiration_datetime    TEXT,
 
-    UNIQUE (consent_id),
-    FOREIGN KEY (user_id) REFERENCES users(id),
-    FOREIGN KEY (bank_id) REFERENCES banks(id)
+  client_id              TEXT    NOT NULL, -- e.g. team014-1
+
+  created_at             TEXT    NOT NULL DEFAULT (datetime('now')),
+  updated_at             TEXT    NOT NULL DEFAULT (datetime('now')),
+
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (bank_id) REFERENCES banks(id)
 );
-	`); err != nil {
+`); err != nil {
+		return err
+	}
+
+	// view with bank code
+	if _, err = tx.ExecContext(ctx, `
+CREATE VIEW IF NOT EXISTS account_consents_view AS
+SELECT
+  c.*,
+  b.code AS bank_code
+FROM account_consents c
+JOIN banks b ON b.id = c.bank_id;
+`); err != nil {
 		return err
 	}
 

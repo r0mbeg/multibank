@@ -20,6 +20,8 @@ type Consent interface {
 	Get(ctx context.Context, id int64) (domain.AccountConsent, error)
 	ListMine(ctx context.Context, userID int64, bankID *int64) ([]domain.AccountConsent, error)
 	Delete(ctx context.Context, id int64) error
+
+	RefreshStale(ctx context.Context, batchLimit, workers int) (int, error)
 }
 
 type ConsentHandler struct {
@@ -51,7 +53,6 @@ func RegisterConsentRoutes(r chi.Router, svc Consent) {
 // @Failure      500    {object}  dto.ErrorResponse
 // @Router       /consents/request [post]
 func (h *ConsentHandler) request(w http.ResponseWriter, r *http.Request) {
-
 	var req dto.ConsentCreateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		httputils.WriteError(w, http.StatusBadRequest, "bad json: "+err.Error())
@@ -68,7 +69,7 @@ func (h *ConsentHandler) request(w http.ResponseWriter, r *http.Request) {
 		UserID:   userID,
 		BankCode: req.BankCode,
 		ClientID: req.ClientID,
-		//Permissions: req.Permissions, // если пусто — сервис подставит дефолт
+		// Permissions do not take it from client. Using defaults in service
 	})
 	if err != nil {
 		httputils.WriteError(w, http.StatusInternalServerError, err.Error())
@@ -85,7 +86,7 @@ func (h *ConsentHandler) request(w http.ResponseWriter, r *http.Request) {
 
 // list retrieves the list of current user's consents
 // @Summary      List my consents
-// @Description  Returns the user's consent. It can be filtered by bank.
+// @Description  Returns the user's consents. Can be filtered by bank.
 // @Tags         Consents
 // @Security     BearerAuth
 // @Produce      json
@@ -95,7 +96,6 @@ func (h *ConsentHandler) request(w http.ResponseWriter, r *http.Request) {
 // @Failure      500      {object}  dto.ErrorResponse
 // @Router       /consents [get]
 func (h *ConsentHandler) list(w http.ResponseWriter, r *http.Request) {
-
 	userID, ok := authmw.UserIDFromContext(r.Context())
 	if !ok {
 		httputils.WriteError(w, http.StatusUnauthorized, "missing user in context")
@@ -186,13 +186,17 @@ func toConsentResponse(c domain.AccountConsent) dto.ConsentResponse {
 		ID:        c.ID,
 		RequestID: c.RequestID,
 		ConsentID: c.ConsentID,
-		BankCode:  c.BankCode,
+
+		BankCode:           c.BankCode, // from VIEW/JOIN
+		Reason:             c.Reason,
+		RequestingBank:     c.RequestingBank,
+		RequestingBankName: c.RequestingBankName,
 
 		Status:       c.Status,
-		AutoApproved: c.AutoApproved,
+		AutoApproved: c.AutoApproved, // *bool — DTO should accept *bool
 		ClientID:     c.ClientID,
 		Permissions:  c.Permissions,
-		// ...
+
 		CreationDateTime:     c.CreationDateTime,
 		StatusUpdateDateTime: c.StatusUpdateDateTime,
 		ExpirationDateTime:   c.ExpirationDateTime,

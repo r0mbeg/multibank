@@ -213,6 +213,80 @@ func (s *Service) EnsureTokensForEnabled(ctx context.Context) error {
 	return nil
 }
 
+// EnsureTokensForEnabledWithWorkers does the same as EnsureTokensForEnabled,
+// but with worker pool
+func (s *Service) EnsureTokensForEnabledWithWorkers(ctx context.Context, workers int) error {
+	const op = "service.bank.EnsureTokensForEnabledWithWorkers"
+	log := s.log.With(slog.String("op", op))
+
+	if workers <= 0 {
+		workers = 1
+	}
+
+	banks, err := s.repo.ListEnabledBanks(ctx)
+	if err != nil {
+		return err
+	}
+	if len(banks) == 0 {
+		return nil
+	}
+
+	sem := make(chan struct{}, workers)
+	errCh := make(chan error, len(banks))
+	doneCh := make(chan struct{}, len(banks))
+
+	for _, b := range banks {
+		// захватываем слот
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case sem <- struct{}{}:
+		}
+
+		// b for goroutine
+		bank := b
+
+		go func() {
+			defer func() { <-sem }()
+
+			// timeout for one bank
+			oneCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+			defer cancel()
+
+			if _, _, err := s.GetOrRefreshToken(oneCtx, bank.ID); err != nil {
+				log.Warn("failed to get/refresh bank token",
+					slog.Int64("bank_id", bank.ID),
+					slog.String("code", bank.Code),
+					slog.String("name", bank.Name),
+					logger.Err(err),
+				)
+				errCh <- err
+			} else {
+				doneCh <- struct{}{}
+			}
+		}()
+	}
+
+	// waiting for all
+	var hadErr bool
+	for i := 0; i < len(banks); i++ {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-doneCh:
+			// ok
+		case <-errCh:
+			hadErr = true
+		}
+	}
+
+	if hadErr {
+		// return generalized error w/o crashing
+		return fmt.Errorf("%s: some tokens failed to refresh", op)
+	}
+	return nil
+}
+
 // GetBankDetails returns bank row by id (thin wrapper over repo).
 func (s *Service) GetBankByID(ctx context.Context, id int64) (domain.Bank, error) {
 	return s.repo.GetBankByID(ctx, id)

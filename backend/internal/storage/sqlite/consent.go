@@ -19,9 +19,10 @@ func NewConsentRepo(db *sql.DB) *ConsentRepo { return &ConsentRepo{db: db} }
 
 // single consentCols - not hardcode
 const consentCols = `
-id,user_id,bank_id,request_id,consent_id,status,auto_approved,permissions_json,reason,requesting_bank,requesting_bank_name,
+id,user_id,bank_id,request_id,consent_id,status,auto_approved,permissions_json,
+reason,requesting_bank,requesting_bank_name,
 creation_datetime,status_update_datetime,expiration_datetime,client_id,
-created_at,updated_at
+created_at,updated_at,bank_code
 `
 
 // rowScanner allows you to scan both *sql.Row and *sql.Rows
@@ -37,13 +38,14 @@ func scanConsent(rs rowScanner) (domain.AccountConsent, error) {
 		consentID                       *string
 		creation, statusUpd, expiration *string
 		createdAtStr, updatedAtStr      *string
+		bankCode                        *string
 	)
 
 	if err := rs.Scan(
 		&c.ID, &c.UserID, &c.BankID, &c.RequestID, &consentID, &c.Status, &autoApproved, &perms,
 		&c.Reason, &c.RequestingBank, &c.RequestingBankName,
 		&creation, &statusUpd, &expiration, &c.ClientID,
-		&createdAtStr, &updatedAtStr,
+		&createdAtStr, &updatedAtStr, &bankCode,
 	); err != nil {
 		return domain.AccountConsent{}, err
 	}
@@ -55,6 +57,7 @@ func scanConsent(rs rowScanner) (domain.AccountConsent, error) {
 		v := (*autoApproved) != 0
 		c.AutoApproved = &v
 	}
+
 	if perms != "" {
 		_ = json.Unmarshal([]byte(perms), &c.Permissions)
 	}
@@ -63,11 +66,19 @@ func scanConsent(rs rowScanner) (domain.AccountConsent, error) {
 	c.StatusUpdateDateTime = sqliteutils.FromISO(statusUpd)
 	c.ExpirationDateTime = sqliteutils.FromISO(expiration)
 
-	if t := sqliteutils.FromISO(createdAtStr); t != nil {
-		c.CreatedAt = *t
+	if createdAtStr != nil && *createdAtStr != "" {
+		if t, err := sqliteutils.ParseTS(*createdAtStr); err == nil {
+			c.CreatedAt = t
+		}
 	}
-	if t := sqliteutils.FromISO(updatedAtStr); t != nil {
-		c.UpdatedAt = *t
+	if updatedAtStr != nil && *updatedAtStr != "" {
+		if t, err := sqliteutils.ParseTS(*updatedAtStr); err == nil {
+			c.UpdatedAt = t
+		}
+	}
+
+	if bankCode != nil {
+		c.BankCode = *bankCode
 	}
 
 	return c, nil
@@ -76,13 +87,22 @@ func scanConsent(rs rowScanner) (domain.AccountConsent, error) {
 func (r *ConsentRepo) Create(ctx context.Context, c *domain.AccountConsent) (int64, error) {
 	const q = `
 INSERT INTO account_consents
-(user_id, bank_id, request_id, consent_id, status, auto_approved, permissions_json, reason, requesting_bank, requesting_bank_name,
- creation_datetime, status_update_datetime, expiration_datetime, client_login)
+(user_id, bank_id, request_id, consent_id, status, auto_approved, permissions_json,
+ reason, requesting_bank, requesting_bank_name,
+ creation_datetime, status_update_datetime, expiration_datetime, client_id)
 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	perms, _ := json.Marshal(c.Permissions)
+	var auto *int64
+	if c.AutoApproved != nil {
+		var v int64
+		if *c.AutoApproved {
+			v = 1
+		}
+		auto = &v
+	}
 	res, err := r.db.ExecContext(ctx, q,
-		c.UserID, c.BankID, c.RequestID, c.ConsentID, string(c.Status), c.AutoApproved,
-		string(perms), c.Reason, c.RequestingBank, c.RequestingBankName,
+		c.UserID, c.BankID, c.RequestID, c.ConsentID, string(c.Status), auto, string(perms),
+		c.Reason, c.RequestingBank, c.RequestingBankName,
 		sqliteutils.ToISO(c.CreationDateTime), sqliteutils.ToISO(c.StatusUpdateDateTime), sqliteutils.ToISO(c.ExpirationDateTime),
 		c.ClientID,
 	)
@@ -103,10 +123,20 @@ SET consent_id = COALESCE(?, consent_id),
     expiration_datetime = COALESCE(?, expiration_datetime),
     updated_at = datetime('now')
 WHERE id = ?`
+
+	var auto *int64 // bool => int64
+	if upd.AutoApproved != nil {
+		var v int64 = 0
+		if *upd.AutoApproved {
+			v = 1
+		}
+		auto = &v
+	}
+
 	_, err := r.db.ExecContext(ctx, q,
 		upd.ConsentID,
 		string(upd.Status),
-		upd.AutoApproved,
+		auto,
 		sqliteutils.ToISO(upd.CreationDateTime),
 		sqliteutils.ToISO(upd.StatusUpdateDateTime),
 		sqliteutils.ToISO(upd.ExpirationDateTime),
@@ -116,13 +146,13 @@ WHERE id = ?`
 }
 
 func (r *ConsentRepo) GetByID(ctx context.Context, id int64) (domain.AccountConsent, error) {
-	q := `SELECT ` + consentCols + ` FROM account_consents WHERE id=?`
+	q := `SELECT ` + consentCols + ` FROM account_consents_view WHERE id=?`
 	row := r.db.QueryRowContext(ctx, q, id)
 	return scanConsent(row)
 }
 
 func (r *ConsentRepo) ListByUser(ctx context.Context, userID int64, bankID *int64) ([]domain.AccountConsent, error) {
-	q := `SELECT ` + consentCols + ` FROM account_consents WHERE user_id=?`
+	q := `SELECT ` + consentCols + ` FROM account_consents_view WHERE user_id=?`
 	args := []any{userID}
 	if bankID != nil {
 		q += ` AND bank_id=?`
@@ -153,4 +183,36 @@ func (r *ConsentRepo) ListByUser(ctx context.Context, userID int64, bankID *int6
 func (r *ConsentRepo) DeleteByID(ctx context.Context, id int64) error {
 	_, err := r.db.ExecContext(ctx, `DELETE FROM account_consents WHERE id=?`, id)
 	return err
+}
+
+// ListNeedingRefresh returns up to the limit of records that potentially need to be updated.
+// AwaitingAuthorization or (Authorized and not updated for long time).
+func (r *ConsentRepo) ListNeedingRefresh(ctx context.Context, limit int) ([]domain.AccountConsent, error) {
+	q := `
+SELECT ` + consentCols + `
+FROM account_consents_view
+WHERE
+    status = 'AwaitingAuthorization'
+    OR (
+        status = 'Authorized' AND
+        -- not updated for 30 mins (example)
+        (status_update_datetime IS NULL OR status_update_datetime < datetime('now', '-30 minutes'))
+    )
+ORDER BY id DESC
+LIMIT ?`
+	rows, err := r.db.QueryContext(ctx, q, limit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]domain.AccountConsent, 0, limit)
+	for rows.Next() {
+		c, err := scanConsent(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
 }

@@ -41,12 +41,12 @@ type AccountConsent struct {
 	RequestingBank     string
 	RequestingBankName string
 
-	// Даты состояния согласия, без префикса "Bank"
+	// dates for consent status
 	CreationDateTime     *time.Time
 	StatusUpdateDateTime *time.Time
 	ExpirationDateTime   *time.Time
 
-	// Внутренние таймштампы записи
+	// internal timestamps
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
