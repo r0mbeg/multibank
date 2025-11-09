@@ -27,7 +27,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "Accounts"
+                    "accounts"
                 ],
                 "summary": "List user accounts",
                 "parameters": [
@@ -50,6 +50,120 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/recommended-products": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin/products"
+                ],
+                "summary": "List recommended product rules",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.RecommendedRule"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin/products"
+                ],
+                "summary": "Upsert recommended rule",
+                "parameters": [
+                    {
+                        "description": "Rule triplet",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RecommendedUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "consumes": [
+                    "application/json"
+                ],
+                "tags": [
+                    "admin/products"
+                ],
+                "summary": "Delete recommended rule",
+                "parameters": [
+                    {
+                        "description": "Rule triplet to delete",
+                        "name": "input",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/dto.RecommendedUpsertRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "No Content"
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/dto.ErrorResponse"
                         }
@@ -702,21 +816,6 @@ const docTemplate = `{
                 "ReadTransactionsDetail"
             ]
         },
-        "domain.ProductType": {
-            "type": "string",
-            "enum": [
-                "deposit",
-                "loan",
-                "card",
-                "account"
-            ],
-            "x-enum-varnames": [
-                "ProductDeposit",
-                "ProductLoan",
-                "ProductCard",
-                "ProductAccount"
-            ]
-        },
         "dto.AccountResponse": {
             "type": "object",
             "properties": {
@@ -901,6 +1000,9 @@ const docTemplate = `{
                 "interestRate": {
                     "type": "number"
                 },
+                "is_recommended": {
+                    "type": "boolean"
+                },
                 "maxAmount": {
                     "type": "number"
                 },
@@ -914,10 +1016,44 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "productType": {
-                    "$ref": "#/definitions/domain.ProductType"
+                    "type": "string"
                 },
                 "termMonths": {
                     "type": "integer"
+                }
+            }
+        },
+        "dto.RecommendedRule": {
+            "type": "object",
+            "properties": {
+                "bank_code": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "product_id": {
+                    "type": "string"
+                },
+                "product_type": {
+                    "type": "string"
+                }
+            }
+        },
+        "dto.RecommendedUpsertRequest": {
+            "type": "object",
+            "properties": {
+                "bank_code": {
+                    "type": "string",
+                    "example": "abank"
+                },
+                "product_id": {
+                    "type": "string",
+                    "example": "prod-abank-card-001"
+                },
+                "product_type": {
+                    "type": "string",
+                    "example": "credit_card"
                 }
             }
         },

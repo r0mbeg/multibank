@@ -73,18 +73,19 @@ func (h *ProductHandler) List(w http.ResponseWriter, r *http.Request) {
 	out := make([]dto.ProductResponse, 0, len(items))
 	for _, p := range items {
 		out = append(out, dto.ProductResponse{
-			ProductID:    p.ProductID,
-			ProductType:  p.ProductType,
-			ProductName:  p.ProductName,
-			Description:  p.Description,
-			InterestRate: p.InterestRate,
-			MinAmount:    p.MinAmount,
-			MaxAmount:    p.MaxAmount,
-			TermMonths:   p.TermMonths,
-			BankID:       p.BankID,
-			BankCode:     p.BankCode,
-			BankName:     p.BankName,
-			FetchedAt:    p.FetchedAt,
+			ProductID:     p.ProductID,
+			ProductType:   p.ProductType,
+			ProductName:   p.ProductName,
+			Description:   p.Description,
+			InterestRate:  p.InterestRate,
+			MinAmount:     p.MinAmount,
+			MaxAmount:     p.MaxAmount,
+			TermMonths:    p.TermMonths,
+			BankID:        p.BankID,
+			BankCode:      p.BankCode,
+			BankName:      p.BankName,
+			FetchedAt:     p.FetchedAt,
+			IsRecommended: p.IsRecommended,
 		})
 	}
 	httputils.WriteJSON(w, http.StatusOK, out)

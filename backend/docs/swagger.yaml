@@ -22,18 +22,6 @@ definitions:
     - ReadAccountsDetail
     - ReadBalances
     - ReadTransactionsDetail
-  domain.ProductType:
-    enum:
-    - deposit
-    - loan
-    - card
-    - account
-    type: string
-    x-enum-varnames:
-    - ProductDeposit
-    - ProductLoan
-    - ProductCard
-    - ProductAccount
   dto.AccountResponse:
     properties:
       account_id:
@@ -157,6 +145,8 @@ definitions:
         type: string
       interestRate:
         type: number
+      is_recommended:
+        type: boolean
       maxAmount:
         type: number
       minAmount:
@@ -166,9 +156,32 @@ definitions:
       productName:
         type: string
       productType:
-        $ref: '#/definitions/domain.ProductType'
+        type: string
       termMonths:
         type: integer
+    type: object
+  dto.RecommendedRule:
+    properties:
+      bank_code:
+        type: string
+      created_at:
+        type: string
+      product_id:
+        type: string
+      product_type:
+        type: string
+    type: object
+  dto.RecommendedUpsertRequest:
+    properties:
+      bank_code:
+        example: abank
+        type: string
+      product_id:
+        example: prod-abank-card-001
+        type: string
+      product_type:
+        example: credit_card
+        type: string
     type: object
   dto.RegisterRequest:
     properties:
@@ -259,7 +272,77 @@ paths:
       - BearerAuth: []
       summary: List user accounts
       tags:
-      - Accounts
+      - accounts
+  /admin/recommended-products:
+    delete:
+      consumes:
+      - application/json
+      parameters:
+      - description: Rule triplet to delete
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RecommendedUpsertRequest'
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Delete recommended rule
+      tags:
+      - admin/products
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/dto.RecommendedRule'
+            type: array
+      security:
+      - BearerAuth: []
+      summary: List recommended product rules
+      tags:
+      - admin/products
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: Rule triplet
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/dto.RecommendedUpsertRequest'
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.ErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Upsert recommended rule
+      tags:
+      - admin/products
   /auth/login:
     post:
       consumes:

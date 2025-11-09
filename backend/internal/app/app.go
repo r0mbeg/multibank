@@ -55,8 +55,11 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	bankRepo := sqlite.NewBankRepo(st.DB())
 	bankSvc := bank.New(log, bankRepo)
 
+	productRecRepo := sqlite.NewRecommendedProductsRepo(st.DB())
 	productClient := openbanking.NewProductClient(log, &http.Client{Timeout: 10 * time.Second})
-	prodSvc := product.New(log, bankRepo, bankSvc, productClient)
+	prodSvc := product.New(log, bankRepo, bankSvc, productRecRepo, productClient)
+
+	recommendedSvc := product.NewRecommendedService(productRecRepo)
 
 	consentRepo := sqlite.NewConsentRepo(st.DB())
 	consentClient := openbanking.NewConsentClient(
@@ -94,14 +97,15 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 	// --- chi mux via httpserver.New ---
 	srv := httpserver.New(
 		httpserver.Deps{
-			Logger:         log,
-			UserService:    userSvc,    // implements handlers.User
-			AuthService:    authSvc,    // implements handlers.Auth
-			BankService:    bankSvc,    // implements handlers.Bank
-			ProductService: prodSvc,    // implements handlers.Product
-			ConsentService: consentSvc, // implements handlers.Consent
-			AccountService: accountSvc, // implements handlers.Account
-			JWT:            jwtMgr,
+			Logger:             log,
+			UserService:        userSvc, // implements handlers.User
+			AuthService:        authSvc, // implements handlers.Auth
+			BankService:        bankSvc, // implements handlers.Bank
+			ProductService:     prodSvc, // implements handlers.Product
+			RecommendedService: recommendedSvc,
+			ConsentService:     consentSvc, // implements handlers.Consent
+			AccountService:     accountSvc, // implements handlers.Account
+			JWT:                jwtMgr,
 		},
 		httpserver.Options{
 			RequestTimeout: cfg.HTTPServer.Timeout,

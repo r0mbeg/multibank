@@ -29,7 +29,7 @@ func RegisterAccountRoutes(r chi.Router, svc Account) {
 // @Summary      List user accounts
 // @Description  Returns the list of accounts available for the authorized user, aggregated across all connected banks.
 // @Description  Each account includes nickname, status, subtype, opening date, and current balance (InterimAvailable).
-// @Tags         Accounts
+// @Tags         accounts
 // @Security     BearerAuth
 // @Produce      json
 // @Param        bank_id  query     int64  false  "Filter by bank ID (optional)"

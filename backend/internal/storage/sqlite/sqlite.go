@@ -142,6 +142,19 @@ CREATE TABLE IF NOT EXISTS banks(
 		return err
 	}
 
+	// recommended products
+	if _, err = tx.ExecContext(ctx, `
+CREATE TABLE IF NOT EXISTS recommended_products (
+    product_id   TEXT NOT NULL,
+    bank_code    TEXT NOT NULL,
+    product_type TEXT NOT NULL,
+    created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (product_id, bank_code, product_type)
+);
+`); err != nil {
+		return err
+	}
+
 	// bank tokens
 	if _, err = tx.ExecContext(ctx, `
 CREATE TABLE IF NOT EXISTS bank_tokens(

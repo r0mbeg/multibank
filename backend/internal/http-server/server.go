@@ -28,14 +28,15 @@ type Server struct {
 }
 
 type Deps struct {
-	Logger         *slog.Logger
-	UserService    handlers.User
-	AuthService    handlers.Auth
-	BankService    handlers.Bank
-	ProductService handlers.Product
-	ConsentService handlers.Consent
-	AccountService handlers.Account
-	JWT            *jwt.Manager
+	Logger             *slog.Logger
+	UserService        handlers.User
+	AuthService        handlers.Auth
+	BankService        handlers.Bank
+	ProductService     handlers.Product
+	RecommendedService handlers.Recommended
+	ConsentService     handlers.Consent
+	AccountService     handlers.Account
+	JWT                *jwt.Manager
 }
 
 type Options struct {
@@ -106,6 +107,13 @@ func New(deps Deps, opts Options) *Server {
 	r.Route("/products", func(rr chi.Router) {
 		rr.Use(authmw.Auth(deps.JWT))
 		handlers.RegisterProductRoutes(rr, deps.ProductService)
+	})
+
+	// Protected routes /recommended-products
+	r.Route("/admin/recommended-products", func(rr chi.Router) {
+		rr.Use(authmw.Auth(deps.JWT))
+		// TODO: protect for Admin
+		handlers.RegisterRecommendedRoutes(rr, deps.RecommendedService)
 	})
 
 	// Protected routes /consents

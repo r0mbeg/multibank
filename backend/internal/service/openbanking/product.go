@@ -82,7 +82,7 @@ func intOrZero(p *int) int {
 func (p bankProduct) ToDomain(bid int64, bcode, bname string) domain.Product {
 	return domain.Product{
 		ProductID:    p.ProductID,
-		ProductType:  domain.ProductType(p.ProductType),
+		ProductType:  p.ProductType,
 		ProductName:  p.ProductName,
 		Description:  strOrEmpty(p.Description),
 		InterestRate: parseFloatPtr(p.InterestRate),
