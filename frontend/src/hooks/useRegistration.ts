@@ -14,7 +14,7 @@ export const useRegistration = (setSnackbarMessage: (message: string) => void, s
         },
         onSuccess: (data) => {
             useAuthStore.getState().login(data.access_token, data.expires_in);
-            navigate({to: '/'})
+            navigate({to: '/consents'})
         },
         onError: (error) => {
             console.error('Registration failed:', error);

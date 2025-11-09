@@ -7,6 +7,7 @@ import type {Consents} from "../types/types.ts";
 import PageTitle from "../components/PageTitle.tsx";
 import {useDeleteConsent} from "../hooks/useDeleteConsent.ts";
 import ConsentItem from "../components/ConsentItem.tsx";
+import {useAuthStore} from "../stores/authStore.ts";
 
 export const Route = createFileRoute('/_auth/consents')({
     component: RouteComponent,
@@ -16,6 +17,17 @@ function RouteComponent() {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const navigate = useNavigate();
+    const {setUser} = useAuthStore()
+
+    useQuery({
+        queryKey: ['me'],
+        queryFn: async () => {
+            const response = await Api.getMe();
+            setUser(response.data)
+            return response.data;
+        },
+        retry: false,
+    })
 
     const {data: consents, isLoading, error} = useQuery<Consents[]>({
         queryKey: ['consents'],
