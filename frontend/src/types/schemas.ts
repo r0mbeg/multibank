@@ -11,10 +11,10 @@ export const loginSchema = z.object({
 })
 
 export const registerSchema = z.object({
-    first_name: z.string(),
-    last_name: z.string(),
-    email: z.email(),
-    patronymic: z.string(),
+    first_name: z.string().min(1, 'поле не может быть пустым'),
+    last_name: z.string().min(1, 'поле не может быть пустым'),
+    email: z.email().min(1, 'поле не может быть пустым'),
+    patronymic: z.string().min(1, 'поле не может быть пустым'),
     password: z.string().min(8, 'пароль должен содержать хотя бы 8 символов'),
-    birthdate: z.string(),
+    birthdate: z.string().min(1, 'поле не может быть пустым'),
 })

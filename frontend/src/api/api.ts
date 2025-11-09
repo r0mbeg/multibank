@@ -38,6 +38,10 @@ export class Api {
         return AxiosApiInstance.get('/consents')
     }
 
+    static getAccounts() {
+        return AxiosApiInstance.get('/accounts')
+    }
+
     static login({email, password}: LoginForm) {
         return AxiosApiInstance.post('/auth/login', {
             email,
@@ -69,18 +73,13 @@ export class Api {
     }
 
     static newConsent(bank_code: string, client_id: string) {
-        return AxiosApiInstance.post('/consent', {
+        return AxiosApiInstance.post('/consents/request', {
             bank_code,
             client_id,
         })
     }
 
-    static deleteConsent(bank_code: string, client_id: string) {
-        return AxiosApiInstance.delete(`/consent`, {
-            data: {
-                bank_code,
-                client_id,
-            }
-        })
+    static deleteConsent(consent_id: string) {
+        return AxiosApiInstance.delete(`/consents/${consent_id}`)
     }
 }

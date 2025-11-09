@@ -15,7 +15,7 @@ const Header = () => {
     }
 
     return (
-        <header className="h-24 shadow-md bg-white rounded-md flex items-center justify-between p-4">
+        <header className="shadow-md bg-white rounded-md flex items-center justify-between p-4">
             <Link to={'/'}>MultiBankAPP</Link>
             <Button
                 startIcon={<LogoutIcon/>}

@@ -20,6 +20,7 @@ import {Visibility, VisibilityOff} from "@mui/icons-material";
 import {zodResolver} from "@hookform/resolvers/zod";
 import {loginBankSchema} from "../types/schemas.ts";
 import {useNewConsent} from "../hooks/useNewConsent.ts";
+import BankItem from "../components/BankItem.tsx";
 
 export const Route = createFileRoute('/_auth/banks')({
     component: RouteComponent,
@@ -65,6 +66,7 @@ function RouteComponent() {
 
     const onSubmit: SubmitHandler<LoginBankForm> = (data) => {
         newConsent({bank_code: selectedBank, client_id: data.login})
+        handleClose();
     }
 
     const onError: SubmitErrorHandler<LoginBankForm> = (errors) => {
@@ -88,23 +90,23 @@ function RouteComponent() {
     return (
         <>
             <PageTitle>Подключенные банки</PageTitle>
-          {isLoading ? (
-              <p>Загрузка...</p>
-          ) : (
-              banks && banks.length > 0 ? (
-                  banks.map((bank) => (
-                      <div key={bank.id}>{bank.name}</div>
-                  ))
-              ) : (
-                  <p>Список банков пуст</p>
-              )
-          )}
+
+            {isLoading ? (
+                <p>Загрузка...</p>
+            ) : (
+                banks && banks.length > 0 ? (
+                    <div className="flex flex-col gap-4 mt-4">
+                        {banks.map((bank) => (
+                            <BankItem key={bank.id} bank={bank} handleClickOpenConsent={handleClickOpenConsent} />
+                        ))}
+                    </div>
+                ) : (
+                    <p>Список банков пуст</p>
+                )
+            )}
+
             {error &&
                 <p>Произошла непредвиденная ошибка при получении данных о банках, попробуйте обновить страницу...</p>}
-
-            <Button variant="outlined" onClick={() => handleClickOpenConsent('abank')}>
-                Open form dialog
-            </Button>
 
             <Dialog open={isOpen} onClose={handleClose}>
                 <DialogTitle>Выпуск согласия</DialogTitle>

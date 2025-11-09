@@ -23,7 +23,7 @@ function RouteComponent() {
 
     return (
         <>
-            <div>Авторизовались))</div>
+            <h1 className={'text-bold text-2xl'}>Добро пожаловать в multibank app</h1>
         </>
     )
 }
