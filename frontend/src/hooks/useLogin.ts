@@ -14,7 +14,7 @@ export const useLogin = (setSnackbarMessage: (message: string) => void, setSnack
         },
         onSuccess: (data) => {
             useAuthStore.getState().login(data.access_token, data.expires_in);
-            navigate({to: '/consents'})
+            navigate({to: '/'})
         },
         onError: (error) => {
             console.error('Login failed:', error);
