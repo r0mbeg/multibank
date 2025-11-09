@@ -1,13 +1,13 @@
 import {Link} from "@tanstack/react-router";
 import {Button} from "@mui/material";
-import {AccountBalance, Storefront, Description} from "@mui/icons-material";
+import {AccountBalance, Storefront, Description, Payments} from "@mui/icons-material";
 import {useAuthStore} from "../stores/authStore.ts";
 
 const links = [
-    {to: '/accounts', icon: <AccountBalance/>, text: 'Счета'},
+    {to: '/accounts', icon: <Payments/>, text: 'Счета'},
     {to: '/products', icon: <Storefront/>, text: 'Витрина'},
     {to: '/consents', icon: <Description/>, text: 'Согласия'},
-    {to: '/banks', icon: <Description/>, text: 'Банки'},
+    {to: '/banks', icon: <AccountBalance/>, text: 'Банки'},
 ];
 
 const Sidebar = () => {
@@ -15,7 +15,7 @@ const Sidebar = () => {
 
     return (
         <nav className="w-64 bg-white rounded-xl shadow-md p-4">
-            <p>{user?.lastName} {user?.firstName.slice(0, 1).toUpperCase()}. {user?.patronic.slice(0, 1).toUpperCase()}.</p>
+            <p className={'mb-4'}>{user?.lastName} {user?.firstName.slice(0, 1).toUpperCase()}. {user?.patronic.slice(0, 1).toUpperCase()}.</p>
             {links.map((link, idx) => (
                 <Link to={link.to} key={idx}>
                     <Button

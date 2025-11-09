@@ -11,9 +11,8 @@ import {
     OutlinedInput, Snackbar,
 } from "@mui/material";
 import {DatePicker} from '@mui/x-date-pickers/DatePicker';
-import {Visibility, VisibilityOff, WarningAmber} from "@mui/icons-material";
+import {Visibility, VisibilityOff} from "@mui/icons-material";
 import React, {useState} from "react";
-import ErrorText from "../components/ErrorText.tsx";
 import type {RegisterForm} from "../types/types.ts";
 import dayjs, {Dayjs} from 'dayjs';
 import {LocalizationProvider} from "@mui/x-date-pickers";
@@ -35,7 +34,6 @@ function RouteComponent() {
         control,
         register,
         handleSubmit,
-        formState: {errors},
     } = useForm<RegisterForm>()
 
     const {mutate: registration, isPending} = useRegistration(setSnackbarMessage, setSnackbarOpen);
@@ -236,12 +234,13 @@ function RouteComponent() {
                     )}
                 />
 
-                {errors && <ErrorText><WarningAmber/> Ошибка</ErrorText>}
-
                 <Button variant="contained" type={'submit'} disabled={isPending}>Зарегистрироваться</Button>
 
-                <p style={{textAlign: 'center'}}>Есть аккаунт? <CustomLink to={'/login'} underline={'hover'}
-                                                                           search={{redirect: undefined}}>Войти</CustomLink>
+                <p
+                    style={{textAlign: 'center'}}
+                >
+                    Есть аккаунт? <CustomLink to={'/login'} underline={'hover'}
+                                              search={{redirect: undefined}}>Войти</CustomLink>
                 </p>
             </form>
 

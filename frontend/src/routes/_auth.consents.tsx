@@ -1,11 +1,12 @@
 import {createFileRoute, useNavigate} from '@tanstack/react-router'
-import {Alert, Button, Skeleton, Snackbar} from "@mui/material";
+import {Alert, Button, Skeleton, Snackbar, Stack} from "@mui/material";
 import {Api} from '../api/api';
 import {useEffect, useState} from "react";
 import {useQuery} from "@tanstack/react-query";
 import type {Consents} from "../types/types.ts";
 import PageTitle from "../components/PageTitle.tsx";
 import {useDeleteConsent} from "../hooks/useDeleteConsent.ts";
+import ConsentItem from "../components/ConsentItem.tsx";
 
 export const Route = createFileRoute('/_auth/consents')({
     component: RouteComponent,
@@ -25,8 +26,10 @@ function RouteComponent() {
         retry: false,
     })
 
-    const {mutate: deleteConsent, isPending, isError} = useDeleteConsent(setSnackbarMessage, setSnackbarOpen);
-
+    const {mutate: deleteConsent, isError} = useDeleteConsent(
+        setSnackbarMessage,
+        setSnackbarOpen,
+    );
 
     useEffect(() => {
         if (error) {
@@ -47,8 +50,8 @@ function RouteComponent() {
         })
     }
 
-    const handleDeleteConsent = (bank_code: string, consent_id: string) => {
-        deleteConsent({bank_code, consent_id})
+    const handleDeleteConsent = (consent_id: string) => {
+        deleteConsent({consent_id})
     }
 
     return (
@@ -60,29 +63,22 @@ function RouteComponent() {
 
             {isLoading ?
                 (
-                    <Skeleton/>
+                    <Stack className={'mt-4'}>
+                        <Skeleton/>
+                        <Skeleton/>
+                        <Skeleton/>
+                    </Stack>
                 ) : (
-                    consents && consents.length > 0 &&
-                    (consents.map((item, idx) => (
-                        <div key={idx} className={'flex justify-between border mb-4 shadow-md rounded-md p-4'}>
-                            <p className={'text-xl'}>{item.bankName}</p>
-
-                            {item.consentStatus === 'active' && (
-                                <>
-                                    <p>согласие активно</p>
-                                    <Button variant={'contained'} color={'error'}
-                                            onClick={() => handleDeleteConsent('213', '321')} disabled={isPending}>отозвать
-                                        согласие</Button>
-                                </>
-                            )}
-
-                            {item.consentStatus === 'pending' && (
-                                <>
-                                    <p className={'text-orange-400'}>согласие в обработке</p>
-                                </>
-                            )}
+                    consents && consents.length > 0 ? (
+                        <div className={'mt-4'}>
+                            {consents.map((consent) => (
+                            <ConsentItem key={consent.consent_id} consent={consent}
+                                         handleDeleteConsent={handleDeleteConsent}/>
+                            ))}
                         </div>
-                    )))
+                    ) : (
+                        <p>Список согласий пуст</p>
+                    )
                 )
             }
 
@@ -92,7 +88,8 @@ function RouteComponent() {
                 onClose={handleSnackbarClose}
                 anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
             >
-                <Alert onClose={handleSnackbarClose} severity="error" sx={{width: '100%'}}>
+                <Alert onClose={handleSnackbarClose} severity={`${isError || error ? 'error' : 'success'}`}
+                       sx={{width: '100%'}}>
                     {snackbarMessage}
                 </Alert>
             </Snackbar>
