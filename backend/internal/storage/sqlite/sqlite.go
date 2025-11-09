@@ -142,6 +142,32 @@ CREATE TABLE IF NOT EXISTS banks(
 		return err
 	}
 
+	// add rows to banks (idempotent)
+	banks := []struct {
+		Name, Code, APIBaseURL, Login, Password string
+		Enabled                                 int
+	}{
+		{"Awesome Bank", "abank", "https://abank.open.bankingapi.ru", "team014", "<secret from the organizers>", 1},
+		{"Super Bank", "sbank", "https://sbank.open.bankingapi.ru", "team014", "<secret from the organizers>", 1},
+		{"Velocity Bank", "vbank", "https://vbank.open.bankingapi.ru", "team014", "<secret from the organizers>", 1},
+	}
+
+	for _, b := range banks {
+		if _, err = tx.ExecContext(ctx, `
+INSERT INTO banks (name, code, api_base_url, login, password, is_enabled)
+VALUES (?, ?, ?, ?, ?, ?)
+ON CONFLICT(code) DO UPDATE SET
+    name         = excluded.name,
+    api_base_url = excluded.api_base_url,
+    login        = excluded.login,
+    password     = excluded.password,
+    is_enabled   = excluded.is_enabled,
+    updated_at   = datetime('now')
+`, b.Name, b.Code, b.APIBaseURL, b.Login, b.Password, b.Enabled); err != nil {
+			return err
+		}
+	}
+
 	// recommended products
 	if _, err = tx.ExecContext(ctx, `
 CREATE TABLE IF NOT EXISTS recommended_products (
@@ -153,6 +179,25 @@ CREATE TABLE IF NOT EXISTS recommended_products (
 );
 `); err != nil {
 		return err
+	}
+
+	// --- add rows to recommended_products (idempotent)
+	recs := [][3]string{
+		// product_id               bank_code  product_type
+		{"prod-abank-card-001", "abank", "credit_card"},
+		{"prod-abank-deposit-001", "abank", "deposit"},
+		{"prod-sbank-card-001", "sbank", "credit_card"},
+		// добавляй свои правила сюда
+	}
+
+	for _, r := range recs {
+		if _, err = tx.ExecContext(ctx, `
+INSERT INTO recommended_products (product_id, bank_code, product_type)
+VALUES (?, ?, ?)
+ON CONFLICT(product_id, bank_code, product_type) DO NOTHING
+`, r[0], r[1], r[2]); err != nil {
+			return err
+		}
 	}
 
 	// bank tokens
