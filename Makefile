@@ -1,97 +1,67 @@
-# ===========
-# Settings
-# ===========
-APP_NAME        ?= multibank-backend
-IMAGE           ?= $(APP_NAME)
-TAG             ?= dev
-CONTAINER_NAME  ?= $(APP_NAME)-$(TAG)
+# ========= Vars =========
+COMPOSE ?= docker compose
+DC_FILE ?= docker-compose.yml
 
-BACKEND_DIR     := backend
-DOCKERFILE      := $(BACKEND_DIR)/Dockerfile
-BUILD_CONTEXT   := $(BACKEND_DIR)
+BACKEND_SERVICE   ?= backend
+FRONTEND_SERVICE  ?= frontend
 
-# Абсолютные пути для volume-монтов (важно для Windows)
-CFG_FILE        := $(abspath $(BACKEND_DIR)/config/local.yaml)
-STORAGE_DIR     := $(abspath $(BACKEND_DIR)/storage)
-LOGS_DIR        := $(abspath $(BACKEND_DIR)/logs)
+# Переопределяемые переменные окружения
+MB_LOG_LEVEL ?= debug
+BACKEND_PORT ?= 8080
+FRONTEND_PORT ?= 5173
 
-# Параметры приложения
-PORT            ?= 8080
-LOG_LEVEL       ?= debug
+# ========= Phony =========
+.PHONY: build-backend build-frontend build-all \
+        run-backend run-frontend run-all \
+        stop-backend stop-frontend stop-all \
+        logs-backend logs-frontend logs-all \
+        sh-backend sh-frontend ps
 
-# Docker Buildx платформа (можно закомментировать, если не нужна)
-PLATFORM        ?= linux/amd64
+# ========= Build =========
+build-backend:
+	$(COMPOSE) -f $(DC_FILE) build $(BACKEND_SERVICE)
 
-# ===========
-# Phony
-# ===========
-.PHONY: build run stop restart logs sh rm image-rm clean test swagger swagger-install help
+build-frontend:
+	$(COMPOSE) -f $(DC_FILE) build $(FRONTEND_SERVICE)
 
-help:
-	@echo "Targets:"
-	@echo "  build           - docker build образ $(IMAGE):$(TAG)"
-	@echo "  run             - запустить контейнер (порт $(PORT), volumes config/storage/logs)"
-	@echo "  stop            - остановить контейнер"
-	@echo "  restart         - перезапустить контейнер"
-	@echo "  logs            - показать логи контейнера (follow)"
-	@echo "  sh              - зайти в shell внутри контейнера"
-	@echo "  rm              - удалить контейнер (если есть)"
-	@echo "  image-rm        - удалить образ $(IMAGE):$(TAG)"
-	@echo "  clean           - stop + rm + image-rm"
-	@echo "  test            - прогнать backend-тесты (пакет ./backend/tests)"
-	@echo "  swagger-install - установить swag CLI"
-	@echo "  swagger         - сгенерировать Swagger (./backend/docs)"
-	@echo ""
-	@echo "Vars (override via make VAR=...):"
-	@echo "  TAG=$(TAG) PORT=$(PORT) LOG_LEVEL=$(LOG_LEVEL)"
+build-all:
+	$(COMPOSE) -f $(DC_FILE) build
 
-# ========== Build ==========
-build:
-	@echo "==> Building docker image $(IMAGE):$(TAG)"
-	@docker build --platform $(PLATFORM) -f $(DOCKERFILE) -t $(IMAGE):$(TAG) $(BUILD_CONTEXT)
+# ========= Run =========
+run-backend:
+	MB_LOG_LEVEL=$(MB_LOG_LEVEL) BACKEND_PORT=$(BACKEND_PORT) $(COMPOSE) -f $(DC_FILE) up -d $(BACKEND_SERVICE)
 
-# ========== Run / Stop ==========
-run: # предварительно создаём директории, чтобы монтирование не падало
-	@mkdir -p "$(STORAGE_DIR)" "$(LOGS_DIR)"
-	@echo "==> Running $(CONTAINER_NAME) from $(IMAGE):$(TAG)"
-	@docker run --rm -d \
-		--name $(CONTAINER_NAME) \
-		-p $(PORT):8080 \
-		-e MB_LOG_LEVEL=$(LOG_LEVEL) \
-		-v "$(CFG_FILE):/etc/multibank/config.yaml:ro" \
-		-v "$(STORAGE_DIR):/app/storage" \
-		-v "$(LOGS_DIR):/app/logs" \
-		$(IMAGE):$(TAG)
-	@echo "-> http://localhost:$(PORT)   (Swagger: /swagger/index.html)"
+run-frontend:
+	MB_LOG_LEVEL=$(MB_LOG_LEVEL) FRONTEND_PORT=$(FRONTEND_PORT) $(COMPOSE) -f $(DC_FILE) up -d $(FRONTEND_SERVICE)
 
-stop:
-	@docker stop $(CONTAINER_NAME) 2>/dev/null || true
+run-all:
+	MB_LOG_LEVEL=$(MB_LOG_LEVEL) BACKEND_PORT=$(BACKEND_PORT) FRONTEND_PORT=$(FRONTEND_PORT) $(COMPOSE) -f $(DC_FILE) up -d
 
-restart: stop run
+# ========= Stop =========
+stop-backend:
+	$(COMPOSE) -f $(DC_FILE) stop $(BACKEND_SERVICE)
 
-logs:
-	@docker logs -f $(CONTAINER_NAME)
+stop-frontend:
+	$(COMPOSE) -f $(DC_FILE) stop $(FRONTEND_SERVICE)
 
-sh:
-	@docker exec -it $(CONTAINER_NAME) /bin/sh || docker exec -it $(CONTAINER_NAME) sh
+stop-all:
+	$(COMPOSE) -f $(DC_FILE) down
 
-rm:
-	@docker rm -f $(CONTAINER_NAME) 2>/dev/null || true
+# ========= Logs / Shell / PS =========
+logs-backend:
+	$(COMPOSE) -f $(DC_FILE) logs -f $(BACKEND_SERVICE)
 
-image-rm:
-	@docker rmi $(IMAGE):$(TAG) 2>/dev/null || true
+logs-frontend:
+	$(COMPOSE) -f $(DC_FILE) logs -f $(FRONTEND_SERVICE)
 
-clean: stop rm image-rm
+logs-all:
+	$(COMPOSE) -f $(DC_FILE) logs -f
 
-# ========== Dev helpers ==========
-test:
-	@echo "==> go test ./backend/tests"
-	@cd backend && go test -v ./tests
+sh-backend:
+	$(COMPOSE) -f $(DC_FILE) exec $(BACKEND_SERVICE) sh
 
-swagger-install:
-	@echo "==> Installing swag CLI"
-	@go install github.com/swaggo/swag/cmd/swag@latest
+sh-frontend:
+	$(COMPOSE) -f $(DC_FILE) exec $(FRONTEND_SERVICE) sh
 
-swagger:
-	@echo "==> Generating Swagger docs"
-	@cd backend && swag init -g cmd/backend/main.go -o docs
+ps:
+	$(COMPOSE) -f $(DC_FILE) ps

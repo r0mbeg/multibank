@@ -60,8 +60,8 @@ func New(deps Deps, opts Options) *Server {
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: true, // if you send cookies/authorization via fetch(..., credentials:'include')
-		MaxAge:           300,  // cache preflight in seconds
+		AllowCredentials: true,
+		MaxAge:           300, // cache preflight in seconds
 	}))
 
 	// basic middlewares

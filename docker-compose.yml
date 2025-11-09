@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  backend:
+    container_name: multibank__backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: multibank-backend:dev
+    restart: unless-stopped
+    environment:
+      MB_LOG_LEVEL: ${MB_LOG_LEVEL:-debug}
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      # read-only cfg
+      - ./backend/config/local.yaml:/etc/multibank/config.yaml:ro
+      # logs and db
+      - ./backend/logs:/app/logs
+      - ./backend/storage:/app/storage
+    networks:
+      - multibank_net
+
+  # TODO
+  frontend:
+    container_name: multibank__frontend
+    image: node:20-alpine
+    working_dir: /app
+    command: sh -lc "npm ci && npm run dev -- --host 0.0.0.0"
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+    networks:
+      - multibank_net
+
+networks:
+  multibank_net:
+    driver: bridge
