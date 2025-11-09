@@ -15,6 +15,54 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/accounts": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Returns the list of accounts available for the authorized user, aggregated across all connected banks.\nEach account includes nickname, status, subtype, opening date, and current balance (InterimAvailable).",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Accounts"
+                ],
+                "summary": "List user accounts",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Filter by bank ID (optional)",
+                        "name": "bank_id",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/dto.AccountResponse"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/dto.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/login": {
             "post": {
                 "description": "Returns access_token using e-mail and password.\n\n**Request example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"email\": \"user@example.com\",\n\"password\": \"P@ssw0rd123\"\n}\n` + "`" + `` + "`" + `` + "`" + `\n\n**Response example**\n` + "`" + `` + "`" + `` + "`" + `json\n{\n\"access_token\": \"eyJhbGciOi...\",\n\"expires_in\": 3600\n}\n` + "`" + `` + "`" + `` + "`" + `",
@@ -668,6 +716,38 @@ const docTemplate = `{
                 "ProductCard",
                 "ProductAccount"
             ]
+        },
+        "dto.AccountResponse": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "account_sub_type": {
+                    "type": "string"
+                },
+                "amount": {
+                    "type": "string"
+                },
+                "bank_code": {
+                    "type": "string"
+                },
+                "client_id": {
+                    "type": "string"
+                },
+                "currency": {
+                    "type": "string"
+                },
+                "nickname": {
+                    "type": "string"
+                },
+                "opening_date": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
         },
         "dto.BankAuthorizeResponse": {
             "type": "object",

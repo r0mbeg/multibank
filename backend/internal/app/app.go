@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"multibank/backend/internal/domain"
 	"multibank/backend/internal/logger"
+	"multibank/backend/internal/service/account"
 	"multibank/backend/internal/service/bank"
 	"multibank/backend/internal/service/consent"
 	"multibank/backend/internal/service/product"
@@ -84,6 +85,9 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 		"Агрегация счетов для HackAPI",
 	)
 
+	accountClient := openbanking.NewAccountClient(log, &http.Client{Timeout: 10 * time.Second})
+	accountSvc := account.New(log, consentRepo, bankSvc, accountClient)
+
 	jwtMgr := jwt.New(cfg.HTTPServer.JWTSecret, cfg.HTTPServer.TokenTTL)
 	authSvc := auth.New(log, userSvc, jwtMgr)
 
@@ -96,6 +100,7 @@ func New(log *slog.Logger, cfg *config.Config) (*App, error) {
 			BankService:    bankSvc,    // implements handlers.Bank
 			ProductService: prodSvc,    // implements handlers.Product
 			ConsentService: consentSvc, // implements handlers.Consent
+			AccountService: accountSvc, // implements handlers.Account
 			JWT:            jwtMgr,
 		},
 		httpserver.Options{
