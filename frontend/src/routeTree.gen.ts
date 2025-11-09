@@ -14,7 +14,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthRouteImport } from './routes/_auth'
 import { Route as AuthIndexRouteImport } from './routes/_auth.index'
 import { Route as AuthTransactionsRouteImport } from './routes/_auth.transactions'
-import { Route as AuthShowcaseRouteImport } from './routes/_auth.showcase'
+import { Route as AuthProductsRouteImport } from './routes/_auth.products'
 import { Route as AuthConsentsRouteImport } from './routes/_auth.consents'
 import { Route as AuthBanksRouteImport } from './routes/_auth.banks'
 import { Route as AuthAccountsRouteImport } from './routes/_auth.accounts'
@@ -43,9 +43,9 @@ const AuthTransactionsRoute = AuthTransactionsRouteImport.update({
   path: '/transactions',
   getParentRoute: () => AuthRoute,
 } as any)
-const AuthShowcaseRoute = AuthShowcaseRouteImport.update({
-  id: '/showcase',
-  path: '/showcase',
+const AuthProductsRoute = AuthProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthConsentsRoute = AuthConsentsRouteImport.update({
@@ -70,7 +70,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AuthAccountsRoute
   '/banks': typeof AuthBanksRoute
   '/consents': typeof AuthConsentsRoute
-  '/showcase': typeof AuthShowcaseRoute
+  '/products': typeof AuthProductsRoute
   '/transactions': typeof AuthTransactionsRoute
   '/': typeof AuthIndexRoute
 }
@@ -80,7 +80,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AuthAccountsRoute
   '/banks': typeof AuthBanksRoute
   '/consents': typeof AuthConsentsRoute
-  '/showcase': typeof AuthShowcaseRoute
+  '/products': typeof AuthProductsRoute
   '/transactions': typeof AuthTransactionsRoute
   '/': typeof AuthIndexRoute
 }
@@ -92,7 +92,7 @@ export interface FileRoutesById {
   '/_auth/accounts': typeof AuthAccountsRoute
   '/_auth/banks': typeof AuthBanksRoute
   '/_auth/consents': typeof AuthConsentsRoute
-  '/_auth/showcase': typeof AuthShowcaseRoute
+  '/_auth/products': typeof AuthProductsRoute
   '/_auth/transactions': typeof AuthTransactionsRoute
   '/_auth/': typeof AuthIndexRoute
 }
@@ -104,7 +104,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/banks'
     | '/consents'
-    | '/showcase'
+    | '/products'
     | '/transactions'
     | '/'
   fileRoutesByTo: FileRoutesByTo
@@ -114,7 +114,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/banks'
     | '/consents'
-    | '/showcase'
+    | '/products'
     | '/transactions'
     | '/'
   id:
@@ -125,7 +125,7 @@ export interface FileRouteTypes {
     | '/_auth/accounts'
     | '/_auth/banks'
     | '/_auth/consents'
-    | '/_auth/showcase'
+    | '/_auth/products'
     | '/_auth/transactions'
     | '/_auth/'
   fileRoutesById: FileRoutesById
@@ -173,11 +173,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthTransactionsRouteImport
       parentRoute: typeof AuthRoute
     }
-    '/_auth/showcase': {
-      id: '/_auth/showcase'
-      path: '/showcase'
-      fullPath: '/showcase'
-      preLoaderRoute: typeof AuthShowcaseRouteImport
+    '/_auth/products': {
+      id: '/_auth/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof AuthProductsRouteImport
       parentRoute: typeof AuthRoute
     }
     '/_auth/consents': {
@@ -208,7 +208,7 @@ interface AuthRouteChildren {
   AuthAccountsRoute: typeof AuthAccountsRoute
   AuthBanksRoute: typeof AuthBanksRoute
   AuthConsentsRoute: typeof AuthConsentsRoute
-  AuthShowcaseRoute: typeof AuthShowcaseRoute
+  AuthProductsRoute: typeof AuthProductsRoute
   AuthTransactionsRoute: typeof AuthTransactionsRoute
   AuthIndexRoute: typeof AuthIndexRoute
 }
@@ -217,7 +217,7 @@ const AuthRouteChildren: AuthRouteChildren = {
   AuthAccountsRoute: AuthAccountsRoute,
   AuthBanksRoute: AuthBanksRoute,
   AuthConsentsRoute: AuthConsentsRoute,
-  AuthShowcaseRoute: AuthShowcaseRoute,
+  AuthProductsRoute: AuthProductsRoute,
   AuthTransactionsRoute: AuthTransactionsRoute,
   AuthIndexRoute: AuthIndexRoute,
 }

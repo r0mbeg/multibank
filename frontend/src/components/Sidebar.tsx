@@ -1,13 +1,13 @@
-import { Link } from "@tanstack/react-router";
+import {Link} from "@tanstack/react-router";
 import {Button} from "@mui/material";
-import { AccountBalance, ReceiptLong, Storefront, Description } from "@mui/icons-material";
+import {AccountBalance, Storefront, Description} from "@mui/icons-material";
 import {useAuthStore} from "../stores/authStore.ts";
 
 const links = [
-    { to: '/accounts', icon: <AccountBalance />, text: 'Счета' },
-    { to: '/transactions', icon: <ReceiptLong />, text: 'Переводы' },
-    { to: '/showcase', icon: <Storefront />, text: 'Витрина' },
-    { to: '/consents', icon: <Description />, text: 'Согласия' },
+    {to: '/accounts', icon: <AccountBalance/>, text: 'Счета'},
+    {to: '/products', icon: <Storefront/>, text: 'Витрина'},
+    {to: '/consents', icon: <Description/>, text: 'Согласия'},
+    {to: '/banks', icon: <Description/>, text: 'Банки'},
 ];
 
 const Sidebar = () => {
@@ -15,7 +15,7 @@ const Sidebar = () => {
 
     return (
         <nav className="w-64 bg-white rounded-xl shadow-md p-4">
-            <p>{user?.lastName} {user?.firstName.slice(0,1).toUpperCase()}. {user?.patronic.slice(0,1).toUpperCase()}.</p>
+            <p>{user?.lastName} {user?.firstName.slice(0, 1).toUpperCase()}. {user?.patronic.slice(0, 1).toUpperCase()}.</p>
             {links.map((link, idx) => (
                 <Link to={link.to} key={idx}>
                     <Button

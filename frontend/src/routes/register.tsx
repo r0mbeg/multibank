@@ -10,32 +10,32 @@ import {
     Link as MUILink,
     OutlinedInput, Snackbar,
 } from "@mui/material";
-import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import {DatePicker} from '@mui/x-date-pickers/DatePicker';
 import {Visibility, VisibilityOff, WarningAmber} from "@mui/icons-material";
 import React, {useState} from "react";
 import ErrorText from "../components/ErrorText.tsx";
-import type { RegisterForm} from "../types/types.ts";
-import dayjs, { Dayjs } from 'dayjs';
+import type {RegisterForm} from "../types/types.ts";
+import dayjs, {Dayjs} from 'dayjs';
 import {LocalizationProvider} from "@mui/x-date-pickers";
 import {AdapterDayjs} from "@mui/x-date-pickers/AdapterDayjs";
 import {ruRU} from "@mui/x-date-pickers/locales";
 import {useRegistration} from "../hooks/useRegistration.ts";
 
 export const Route = createFileRoute('/register')({
-  component: RouteComponent,
+    component: RouteComponent,
 })
 
 const CustomLink = createLink(MUILink);
 
 function RouteComponent() {
-    const [snackbarOpen, setSnackbarOpen] = useState(false); // Состояние для открытия Snackbar
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const {
         control,
         register,
         handleSubmit,
-        formState: { errors },
+        formState: {errors},
     } = useForm<RegisterForm>()
 
     const {mutate: registration, isPending} = useRegistration(setSnackbarMessage, setSnackbarOpen);
@@ -49,7 +49,7 @@ function RouteComponent() {
     }
 
     const handleSnackbarClose = () => {
-        setSnackbarOpen(false); // Закрываем Snackbar
+        setSnackbarOpen(false);
     };
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -65,12 +65,15 @@ function RouteComponent() {
     return (
         <div className={'flex flex-col justify-center items-center h-full'}>
             <h1 className={'text-6xl mb-8'}>Регистрация в Multibank APP</h1>
-            <form className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'} onSubmit={handleSubmit(onSubmit, onError)}>
+            <form
+                className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'}
+                onSubmit={handleSubmit(onSubmit, onError)}
+            >
                 <Controller
                     name='first_name'
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -81,7 +84,7 @@ function RouteComponent() {
                                 id={"outlined-adornment-first-name"}
                                 {...field}
                                 label={'имя'}
-                                {...register("first_name", { required: true })}
+                                {...register("first_name", {required: true})}
                             />
                         </FormControl>
                     )}
@@ -91,7 +94,7 @@ function RouteComponent() {
                     name='last_name'
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -102,7 +105,7 @@ function RouteComponent() {
                                 id={"outlined-adornment-last-name"}
                                 {...field}
                                 label={'фамилия'}
-                                {...register("last_name", { required: true })}
+                                {...register("last_name", {required: true})}
                             />
                         </FormControl>
                     )}
@@ -112,7 +115,7 @@ function RouteComponent() {
                     name='patronymic'
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -123,7 +126,7 @@ function RouteComponent() {
                                 id={"outlined-adornment-patronymic"}
                                 {...field}
                                 label={'отчество'}
-                                {...register("patronymic", { required: true })}
+                                {...register("patronymic", {required: true})}
                             />
                         </FormControl>
                     )}
@@ -145,8 +148,9 @@ function RouteComponent() {
                             return true;
                         }
                     }}
-                    render={({ field, fieldState: { error } }) => (
-                        <LocalizationProvider dateAdapter={AdapterDayjs} localeText={ruRU.components.MuiLocalizationProvider.defaultProps.localeText}>
+                    render={({field, fieldState: {error}}) => (
+                        <LocalizationProvider dateAdapter={AdapterDayjs}
+                                              localeText={ruRU.components.MuiLocalizationProvider.defaultProps.localeText}>
                             <DatePicker
                                 label="Дата рождения"
                                 value={field.value ? dayjs(field.value) : null}
@@ -172,7 +176,7 @@ function RouteComponent() {
                     name='email'
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -183,7 +187,7 @@ function RouteComponent() {
                                 id={"outlined-adornment-email"}
                                 {...field}
                                 label={'эл. почта'}
-                                {...register("email", { required: true })}
+                                {...register("email", {required: true})}
                             />
                         </FormControl>
                     )}
@@ -193,7 +197,7 @@ function RouteComponent() {
                     name={'password'}
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -205,7 +209,7 @@ function RouteComponent() {
                                 {...field}
                                 type={showPassword ? 'text' : 'password'}
                                 label={'пароль'}
-                                {...register("password", { required: true })}
+                                {...register("password", {required: true})}
                                 endAdornment={
                                     <InputAdornment position="end">
                                         <IconButton
@@ -220,9 +224,9 @@ function RouteComponent() {
                                             {
                                                 showPassword
                                                     ?
-                                                    <VisibilityOff color={error ? 'error' : 'inherit'} />
+                                                    <VisibilityOff color={error ? 'error' : 'inherit'}/>
                                                     :
-                                                    <Visibility color={error ? 'error' : 'inherit'} />
+                                                    <Visibility color={error ? 'error' : 'inherit'}/>
                                             }
                                         </IconButton>
                                     </InputAdornment>
@@ -232,20 +236,22 @@ function RouteComponent() {
                     )}
                 />
 
-                {errors && <ErrorText><WarningAmber /> Ошибка</ErrorText>}
+                {errors && <ErrorText><WarningAmber/> Ошибка</ErrorText>}
 
                 <Button variant="contained" type={'submit'} disabled={isPending}>Зарегистрироваться</Button>
 
-                <p style={{textAlign: 'center'}}>Есть аккаунт? <CustomLink to={'/login'} underline={'hover'} search={{redirect: undefined}}>Войти</CustomLink></p>
+                <p style={{textAlign: 'center'}}>Есть аккаунт? <CustomLink to={'/login'} underline={'hover'}
+                                                                           search={{redirect: undefined}}>Войти</CustomLink>
+                </p>
             </form>
 
             <Snackbar
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
             >
-                <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+                <Alert onClose={handleSnackbarClose} severity="error" sx={{width: '100%'}}>
                     {snackbarMessage}
                 </Alert>
             </Snackbar>

@@ -21,9 +21,9 @@ function RouteComponent() {
         retry: false,
     })
 
-  return (
-      <>
-          <div>Авторизовались))</div>
-      </>
-  )
+    return (
+        <>
+            <div>Авторизовались))</div>
+        </>
+    )
 }

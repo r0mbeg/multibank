@@ -1,4 +1,4 @@
-import { create } from "zustand/react";
+import {create} from "zustand/react";
 import {devtools, persist} from "zustand/middleware";
 
 interface User {
@@ -10,13 +10,13 @@ interface User {
 
 interface AuthState {
     token: string | null;
-    expiresAt: number | null; // Дата истечения в миллисекундах (Date.now() + expires_in * 1000)
+    expiresAt: number | null;
     user: User | null;
     isAuthenticated: boolean;
     setUser: (user: Me) => void;
-    login: (token: string, expiresIn: number, user?: User) => void; // expiresIn в секундах
+    login: (token: string, expiresIn: number, user?: User) => void;
     logout: () => void;
-    checkTokenValidity: () => boolean; // Проверяет, не истёк ли токен
+    checkTokenValidity: () => boolean;
 }
 
 interface Me {
@@ -61,10 +61,10 @@ export const useAuthStore = create<AuthState>()(devtools(
                 isAuthenticated: false,
             }),
             checkTokenValidity: () => {
-                const { expiresAt } = get();
+                const {expiresAt} = get();
                 return expiresAt ? Date.now() < expiresAt : false;
             },
         }),
-        { name: 'auth-storage' } // Сохраняется в localStorage
+        {name: 'auth-storage'} // Сохраняется в localStorage
     ))
 );
