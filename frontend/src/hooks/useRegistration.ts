@@ -13,13 +13,12 @@ export const useRegistration = (setSnackbarMessage: (message: string) => void, s
             return response.data;
         },
         onSuccess: (data) => {
-            useAuthStore.getState().login(data.accsess_token, data.expires_in);
+            useAuthStore.getState().login(data.access_token, data.expires_in);
             navigate({to: '/'})
-            console.log('Registration successful:', data);
         },
         onError: (error) => {
             console.error('Registration failed:', error);
-            setSnackbarMessage(error.response.data.error || 'Произошла ошибка'); // Устанавливаем сообщение
+            setSnackbarMessage('Произошла ошибка');
             setSnackbarOpen(true);
         },
         retry: false,

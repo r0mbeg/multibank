@@ -22,14 +22,14 @@ export const Route = createFileRoute('/login')({
 const CustomLink = createLink(MUILink);
 
 function LoginPage() {
-    const [snackbarOpen, setSnackbarOpen] = useState(false); // Состояние для открытия Snackbar
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const {
         control,
         register,
         handleSubmit,
-        formState: { errors },
+        formState: {errors},
     } = useForm<LoginForm>()
 
     const {mutate: login, isPending} = useLogin(setSnackbarMessage, setSnackbarOpen);
@@ -43,7 +43,7 @@ function LoginPage() {
     }
 
     const handleSnackbarClose = () => {
-        setSnackbarOpen(false); // Закрываем Snackbar
+        setSnackbarOpen(false);
     };
 
     const handleClickShowPassword = () => setShowPassword((show) => !show);
@@ -59,23 +59,24 @@ function LoginPage() {
     return (
         <div className={'flex flex-col justify-center items-center h-full'}>
             <h1 className={'text-6xl mb-8'}>Multibank APP</h1>
-            <form className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'} onSubmit={handleSubmit(onSubmit, onError)}>
+            <form className={'flex flex-col max-w-80 gap-y-4 p-4 rounded-md bg-white shadow-md'}
+                  onSubmit={handleSubmit(onSubmit, onError)}>
                 <Controller
                     name='email'
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
                             size={'small'}
                         >
-                            <InputLabel htmlFor="outlined-adornment-login">Логин</InputLabel>
+                            <InputLabel htmlFor="outlined-adornment-login">Эл. почта</InputLabel>
                             <OutlinedInput
                                 id={"outlined-adornment-login"}
                                 {...field}
-                                label={'логин'}
-                                {...register("email", { required: true })}
+                                label={'Эл. почта'}
+                                {...register("email", {required: true})}
                             />
                         </FormControl>
                     )}
@@ -85,7 +86,7 @@ function LoginPage() {
                     name={'password'}
                     control={control}
                     defaultValue={''}
-                    render={({ field, fieldState: { error } }) => (
+                    render={({field, fieldState: {error}}) => (
                         <FormControl
                             variant="outlined"
                             error={!!error}
@@ -97,7 +98,7 @@ function LoginPage() {
                                 {...field}
                                 type={showPassword ? 'text' : 'password'}
                                 label={'пароль'}
-                                {...register("password", { required: true })}
+                                {...register("password", {required: true})}
                                 endAdornment={
                                     <InputAdornment position="end">
                                         <IconButton
@@ -112,9 +113,9 @@ function LoginPage() {
                                             {
                                                 showPassword
                                                     ?
-                                                <VisibilityOff color={error ? 'error' : 'inherit'} />
+                                                    <VisibilityOff color={error ? 'error' : 'inherit'}/>
                                                     :
-                                                <Visibility color={error ? 'error' : 'inherit'} />
+                                                    <Visibility color={error ? 'error' : 'inherit'}/>
                                             }
                                         </IconButton>
                                     </InputAdornment>
@@ -124,20 +125,21 @@ function LoginPage() {
                     )}
                 />
 
-                {(errors.email || errors.password) && <ErrorText><WarningAmber /> Заполните все поля</ErrorText>}
+                {(errors.email || errors.password) && <ErrorText><WarningAmber/> Заполните все поля</ErrorText>}
 
                 <Button variant="contained" type={'submit'} disabled={isPending}>Войти</Button>
 
-                <CustomLink to={'/register'} underline={'hover'} sx={{textAlign: 'center'}}>Зарегистрироваться</CustomLink>
+                <CustomLink to={'/register'} underline={'hover'}
+                            sx={{textAlign: 'center'}}>Зарегистрироваться</CustomLink>
             </form>
 
             <Snackbar
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={handleSnackbarClose}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+                anchorOrigin={{vertical: 'bottom', horizontal: 'right'}}
             >
-                <Alert onClose={handleSnackbarClose} severity="error" sx={{ width: '100%' }}>
+                <Alert onClose={handleSnackbarClose} severity="error" sx={{width: '100%'}}>
                     {snackbarMessage}
                 </Alert>
             </Snackbar>

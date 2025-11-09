@@ -10,10 +10,9 @@ export const AxiosApiInstance = axios.create({
     withCredentials: true,
 })
 
-// Interceptor для запросов: динамически добавляем токен из store
 AxiosApiInstance.interceptors.request.use(
     (config) => {
-        const token = useAuthStore.getState().token; // Берём токен на момент запроса
+        const token = useAuthStore.getState().token;
         if (token) {
             config.headers.Authorization = `Bearer ${token}`;
         }
@@ -23,15 +22,12 @@ AxiosApiInstance.interceptors.request.use(
         return Promise.reject(error);
     }
 );
-// Опционально: Interceptor для ответов — обрабатываем 401 (токен истёк)
+
 AxiosApiInstance.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response?.status === 401) {
-            // Токен истёк или недействителен — разлогиниваем
             useAuthStore.getState().logout();
-            // Опционально: перенаправьте на /login
-            // window.location.href = '/login';
         }
         return Promise.reject(error);
     }
@@ -62,5 +58,29 @@ export class Api {
 
     static getMe() {
         return AxiosApiInstance.get('/me')
+    }
+
+    static getProducts() {
+        return AxiosApiInstance.get('/products')
+    }
+
+    static getBanks() {
+        return AxiosApiInstance.get('/banks')
+    }
+
+    static newConsent(bank_code: string, client_id: string) {
+        return AxiosApiInstance.post('/consent', {
+            bank_code,
+            client_id,
+        })
+    }
+
+    static deleteConsent(bank_code: string, client_id: string) {
+        return AxiosApiInstance.delete(`/consent`, {
+            data: {
+                bank_code,
+                client_id,
+            }
+        })
     }
 }

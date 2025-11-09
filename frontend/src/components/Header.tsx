@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "@tanstack/react-router";
+import {Link, useNavigate} from "@tanstack/react-router";
 import LogoutIcon from '@mui/icons-material/Logout';
 import {useAuthStore} from "../stores/authStore.ts";
 import {Button} from "@mui/material";

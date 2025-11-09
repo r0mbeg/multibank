@@ -6,7 +6,7 @@ type PageTitleProps = {
 
 const PageTitle: React.FC<PageTitleProps> = ({children}) => {
     return (
-        <h1 className={'text-4xl mb-8'}>{children}</h1>
+        <h1 className={'text-4xl'}>{children}</h1>
     );
 };
 
